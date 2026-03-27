@@ -1,3 +1,4 @@
+/// ANSI escape code functions for terminal color output.
 import gleam/float
 import gleam/int
 import oklch/conversion
@@ -9,6 +10,7 @@ const ansi_fg_prefix = "\u{001b}[38;2;"
 
 const ansi_bg_prefix = "\u{001b}[48;2;"
 
+/// Wrap text in ANSI escape codes to display it with the given foreground color.
 pub fn ansi(color: Oklch, text: String) -> String {
   let rgb = conversion.oklch_to_rgb(color)
   let Rgb(r: r, g: g, b: b, alpha: _) = rgb
@@ -27,6 +29,7 @@ pub fn ansi(color: Oklch, text: String) -> String {
   <> ansi_reset
 }
 
+/// Wrap text in ANSI escape codes to display it with the given background color.
 pub fn ansi_bg(color: Oklch, text: String) -> String {
   let rgb = conversion.oklch_to_rgb(color)
   let Rgb(r: r, g: g, b: b, alpha: _) = rgb
@@ -45,6 +48,7 @@ pub fn ansi_bg(color: Oklch, text: String) -> String {
   <> ansi_reset
 }
 
+/// Wrap text in ANSI escape codes to display it with both foreground and background colors.
 pub fn ansi_fg_bg(fg: Oklch, bg: Oklch, text: String) -> String {
   let fg_rgb = conversion.oklch_to_rgb(fg)
   let Rgb(r: fg_r, g: fg_g, b: fg_b, alpha: _) = fg_rgb

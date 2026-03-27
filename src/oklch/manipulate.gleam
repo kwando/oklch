@@ -1,6 +1,9 @@
+/// Color manipulation functions for OKLCH colors.
 import gleam/float
 import oklch/types.{type Oklch, Oklch}
 
+/// Lighten a color by increasing lightness.
+/// Clamps to 1.0 if the result exceeds.
 pub fn lighten(color: Oklch, amount: Float) -> Oklch {
   let Oklch(l: l, c: c, h: h, alpha: alpha) = color
   let new_l = l +. amount
@@ -11,10 +14,14 @@ pub fn lighten(color: Oklch, amount: Float) -> Oklch {
   Oklch(l: new_l, c: c, h: h, alpha: alpha)
 }
 
+/// Darken a color by decreasing lightness.
+/// Clamps to 0.0 if the result goes below.
 pub fn darken(color: Oklch, amount: Float) -> Oklch {
   lighten(color, 0.0 -. amount)
 }
 
+/// Increase chroma (saturation).
+/// Clamps to 0.4 if exceeded.
 pub fn saturate(color: Oklch, amount: Float) -> Oklch {
   let Oklch(l: l, c: c, h: h, alpha: alpha) = color
   let new_c = c +. amount
@@ -29,10 +36,14 @@ pub fn saturate(color: Oklch, amount: Float) -> Oklch {
   Oklch(l: l, c: new_c, h: h, alpha: alpha)
 }
 
+/// Decrease chroma (saturation).
+/// Clamps to 0.0 if exceeded.
 pub fn desaturate(color: Oklch, amount: Float) -> Oklch {
   saturate(color, 0.0 -. amount)
 }
 
+/// Rotate hue by the given degrees.
+/// Positive values rotate clockwise, negative counter-clockwise.
 pub fn rotate_hue(color: Oklch, degrees: Float) -> Oklch {
   let Oklch(l: l, c: c, h: h, alpha: alpha) = color
   let new_h = h +. degrees
@@ -47,6 +58,7 @@ pub fn rotate_hue(color: Oklch, degrees: Float) -> Oklch {
   Oklch(l: l, c: c, h: new_h, alpha: alpha)
 }
 
+/// Set the alpha (opacity) channel.
 pub fn set_alpha(color: Oklch, alpha: Float) -> Oklch {
   let Oklch(l: l, c: c, h: h, alpha: _) = color
   let alpha = case alpha <. 0.0 {
@@ -60,6 +72,7 @@ pub fn set_alpha(color: Oklch, alpha: Float) -> Oklch {
   Oklch(l: l, c: c, h: h, alpha: alpha)
 }
 
+/// Set the lightness channel.
 pub fn set_l(color: Oklch, l: Float) -> Oklch {
   let Oklch(l: _, c: c, h: h, alpha: alpha) = color
   let l = case l <. 0.0 {
@@ -73,6 +86,7 @@ pub fn set_l(color: Oklch, l: Float) -> Oklch {
   Oklch(l: l, c: c, h: h, alpha: alpha)
 }
 
+/// Set the chroma (saturation) channel.
 pub fn set_c(color: Oklch, c: Float) -> Oklch {
   let Oklch(l: l, c: _, h: h, alpha: alpha) = color
   let c = case c <. 0.0 {
@@ -86,6 +100,7 @@ pub fn set_c(color: Oklch, c: Float) -> Oklch {
   Oklch(l: l, c: c, h: h, alpha: alpha)
 }
 
+/// Set the hue channel.
 pub fn set_h(color: Oklch, h: Float) -> Oklch {
   let Oklch(l: l, c: c, h: _, alpha: alpha) = color
   let h = case h <. 0.0 {

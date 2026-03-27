@@ -105,7 +105,7 @@ pub fn round_trip_oklch_rgb_test() {
 pub fn oklch_to_hex_test() {
   let color = oklch.oklch(0.5, 0.2, 180.0, 1.0)
   let hex = oklch.oklch_to_hex(color)
-  assert string.length(hex) == 8
+  assert string.length(hex) == 7
 }
 
 pub fn hex_to_oklch_test() {

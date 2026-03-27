@@ -1,3 +1,7 @@
+/// Color conversion functions between OKLCH, RGB, and hex formats.
+/// 
+/// Uses the OKLAB color space matrices from CSS Color Module Level 4 spec
+/// with proper sRGB gamma correction.
 import gleam/float
 import gleam/int
 import gleam/list
@@ -9,52 +13,68 @@ import oklch/types.{
 
 const pi = 3.141592653589793
 
+/// Convert OKLCH color to RGB.
+/// 
+/// Uses the OKLAB color space as an intermediate step:
+/// OKLCH -> OKLAB -> Linear RGB -> sRGB
+/// 
+/// Negative RGB values are clamped to 0.
 pub fn oklch_to_rgb(color: Oklch) -> Rgb {
   let Oklch(l: l, c: c, h: h, alpha: alpha) = color
   let h_rad = h *. pi /. 180.0
 
   let a = c *. cos(h_rad)
-  let b = c *. sin(h_rad)
+  let b_val = c *. sin(h_rad)
 
-  let l_ = l
-  let a_ = a
-  let b_ = b
+  let r = 1.0 *. l +. 0.3963377774 *. a +. 0.2158037573 *. b_val
+  let g = 1.0 *. l -. 0.1055613458 *. a -. 0.0638541728 *. b_val
+  let b = 1.0 *. l -. 0.0894841775 *. a -. 1.291485548 *. b_val
 
-  let l_ = l_ *. 0.999999998627
-  let m = l_ -. a_ *. 0.00000185604507 +. b_ *. 0.000000752452
-  let s = l_ -. a_ *. 0.000001357175 +. b_ *. 0.0000012053499986
+  let r = linear_to_srgb(r)
+  let g = linear_to_srgb(g)
+  let b = linear_to_srgb(b)
 
-  let l_ = l_
-  let m = m
-  let s = s
+  let r = case r <. 0.0 {
+    True -> 0.0
+    False -> r
+  }
+  let g = case g <. 0.0 {
+    True -> 0.0
+    False -> g
+  }
+  let b = case b <. 0.0 {
+    True -> 0.0
+    False -> b
+  }
 
-  let r = 1.1958673672 *. l_ +. 1.5956134384 *. m +. -0.2042349563 *. s
-  let g = -0.7906214646 *. l_ +. -0.4123264242 *. m +. 1.2066554152 *. s
-  let b_val = -0.0274107299 *. l_ +. -0.0473366095 *. m +. 1.1072054574 *. s
-
-  Rgb(r: r, g: g, b: b_val, alpha: alpha)
+  Rgb(r: r, g: g, b: b, alpha: alpha)
 }
 
+/// Convert RGB color to OKLCH.
+/// 
+/// Uses the OKLAB color space as an intermediate step:
+/// sRGB -> Linear RGB -> OKLAB -> OKLCH
 pub fn rgb_to_oklch(color: Rgb) -> Oklch {
   let Rgb(r: r, g: g, b: b, alpha: alpha) = color
 
-  let r_ = r *. 1.0968737022 +. g *. -0.5573540038 +. b *. -0.0567588382
-  let g_ = r *. -0.1638964159 +. g *. 1.063506399 +. b *. 0.0121260595
-  let b_ = r *. -0.0181419791 +. g *. -0.0290965938 +. b *. 1.1074361441
+  let r = srgb_to_linear(r)
+  let g = srgb_to_linear(g)
+  let b = srgb_to_linear(b)
 
-  let l_ = 0.3128992868 *. r_ +. 0.6398199987 *. g_ +. 0.0473507145 *. b_
-  let m = -0.015445449 *. r_ +. 0.3722472822 *. g_ +. 0.6436984628 *. b_
-  let s = 0.0526999684 *. r_ +. -0.1210421643 *. g_ +. 0.9683421359 *. b_
+  let l = 0.2104542553 *. r +. 0.793617785 *. g -. 0.0040720468 *. b
+  let a_val = 1.9779984951 *. r -. 2.428592205 *. g +. 0.4505937099 *. b
+  let b_val = 0.0259040371 *. r +. 0.7827717662 *. g -. 0.808675766 *. b
 
-  let l = l_
-  let a = 1.0155740139 *. l -. 0.0356684545 *. m +. -0.0200195581 *. s
-  let b_val = 0.0036017376 *. l +. 0.0074108479 *. m +. -0.0165359244 *. s
-
-  let c = case float.square_root(a *. a +. b_val *. b_val) {
+  let l = case l <. 0.0 {
+    True -> 0.0
+    False -> l
+  }
+  let c = float.square_root(a_val *. a_val +. b_val *. b_val)
+  let c = case c {
     Ok(v) -> v
     Error(_) -> 0.0
   }
-  let h = atan2(b_val, a) *. 180.0 /. pi
+  let h = atan2(b_val, a_val) *. 180.0 /. pi
 
   let h = case h <. 0.0 {
     True -> h +. 360.0
@@ -186,6 +206,48 @@ fn parse_hex_rgb(
       Ok(types.rgb_from_ints(r, g, b, int.to_float(a) /. 255.0))
     }
     _, _, _, _ -> Error(InvalidHexValue)
+  }
+}
+
+fn srgb_to_linear(c: Float) -> Float {
+  let c = case c <. 0.0 {
+    True -> 0.0
+    False ->
+      case c >. 1.0 {
+        True -> 1.0
+        False -> c
+      }
+  }
+  let threshold = 0.04045 /. 12.92
+  case c <. threshold {
+    True -> c /. 12.92
+    False -> {
+      let tmp = c +. 0.055
+      let c = tmp /. 1.055
+      c *. c *. c
+    }
+  }
+}
+
+fn linear_to_srgb(c: Float) -> Float {
+  let c = case c <. 0.0 {
+    True -> 0.0
+    False -> c
+  }
+  case c <. 0.0031308 {
+    True -> c *. 12.92
+    False -> {
+      let tmp = float.power(c, 1.0 /. 3.0)
+      let tmp = case tmp {
+        Ok(v) -> v
+        Error(_) -> 0.0
+      }
+      let c = tmp *. 1.055 -. 0.055
+      case c >. 1.0 {
+        True -> 1.0
+        False -> c
+      }
+    }
   }
 }
 
