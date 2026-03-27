@@ -1,3 +1,4 @@
+import oklch/ansi
 import oklch/conversion
 import oklch/manipulate
 import oklch/types
@@ -110,4 +111,16 @@ pub fn wcag_aa_large_text(ratio: Float) -> Bool {
 
 pub fn wcag_aaa_large_text(ratio: Float) -> Bool {
   util.wcag_aaa_large_text(ratio)
+}
+
+pub fn ansi(color: Oklch, text: String) -> String {
+  ansi.ansi(color, text)
+}
+
+pub fn ansi_bg(color: Oklch, text: String) -> String {
+  ansi.ansi_bg(color, text)
+}
+
+pub fn ansi_fg_bg(fg: Oklch, bg: Oklch, text: String) -> String {
+  ansi.ansi_fg_bg(fg, bg, text)
 }

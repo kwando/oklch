@@ -54,9 +54,9 @@ pub fn rgb_from_ints(r: Int, g: Int, b: Int, alpha: Float) -> Rgb {
       }
   }
   Rgb(
-    r: int_to_float(r) /. 255.0,
-    g: int_to_float(g) /. 255.0,
-    b: int_to_float(b) /. 255.0,
+    r: int.to_float(r) /. 255.0,
+    g: int.to_float(g) /. 255.0,
+    b: int.to_float(b) /. 255.0,
     alpha: clamp_alpha(alpha),
   )
 }
@@ -111,10 +111,6 @@ fn clamp_channel(c: Float) -> Float {
         False -> c
       }
   }
-}
-
-fn int_to_float(i: Int) -> Float {
-  i |> int.to_float
 }
 
 fn float_modulo(a: Float, b: Float) -> Float {

@@ -263,3 +263,39 @@ pub fn wcag_aaa_large_text_pass_test() {
   assert oklch.wcag_aaa_large_text(4.5) == True
   assert oklch.wcag_aaa_large_text(4.4) == False
 }
+
+pub fn ansi_fg_test() {
+  let color = oklch.oklch(0.6, 0.2, 180.0, 1.0)
+  let result = oklch.ansi(color, "Hello")
+  assert string.contains(result, "Hello")
+  assert string.contains(result, "\u{001b}[38;2;")
+  assert string.contains(result, "\u{001b}[0m")
+}
+
+pub fn ansi_bg_test() {
+  let color = oklch.oklch(0.6, 0.2, 180.0, 1.0)
+  let result = oklch.ansi_bg(color, "Hello")
+  assert string.contains(result, "Hello")
+  assert string.contains(result, "\u{001b}[48;2;")
+  assert string.contains(result, "\u{001b}[0m")
+}
+
+pub fn ansi_fg_bg_test() {
+  let fg = oklch.oklch(0.6, 0.2, 180.0, 1.0)
+  let bg = oklch.oklch(0.95, 0.0, 0.0, 1.0)
+  let result = oklch.ansi_fg_bg(fg, bg, "Hello")
+  assert string.contains(result, "Hello")
+  assert string.contains(result, "\u{001b}[38;2;")
+  assert string.contains(result, "\u{001b}[48;2;")
+  assert string.contains(result, "\u{001b}[0m")
+}
+
+pub fn ansi_black_and_white_test() {
+  let black = oklch.oklch(0.0, 0.0, 0.0, 1.0)
+  let white = oklch.oklch(1.0, 0.0, 0.0, 1.0)
+
+  let result = oklch.ansi_fg_bg(black, white, "X")
+  assert string.contains(result, "X")
+  assert string.contains(result, "\u{001b}[38;2;")
+  assert string.contains(result, "\u{001b}[48;2;")
+}
