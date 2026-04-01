@@ -3,6 +3,7 @@ import gleam/io
 import gleam/list
 import gleam/result
 import gleam/string
+import gleam_community/colour
 import oklch
 
 pub fn main() {
@@ -46,11 +47,9 @@ fn gradient(text: String, col1: oklch.Oklch, col2: oklch.Oklch) -> String {
   |> string.join("")
 }
 
-fn palette(
-  hex: String,
-  number_of_colors: Int,
-) -> Result(List(oklch.Oklch), oklch.ParseError) {
-  use color <- result.try(oklch.hex_to_oklch(hex))
+fn palette(hex: String, number_of_colors: Int) -> Result(List(oklch.Oklch), Nil) {
+  use parsed <- result.try(colour.from_rgb_hex_string(hex))
+  let color = oklch.from_colour(parsed)
 
   let diff = 360.0 /. int.to_float(number_of_colors)
 

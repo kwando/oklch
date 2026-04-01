@@ -199,16 +199,6 @@ pub fn oklch_to_hex(color: Oklch) -> String {
   rgb_to_hex(rgb)
 }
 
-/// Parse a hex string to an OKLCH color.
-///
-/// Supports `#RGB`, `#RGBA`, `#RRGGBB`, and `#RRGGBBAA`.
-pub fn hex_to_oklch(hex: String) -> Result(Oklch, ParseError) {
-  case hex_to_rgb(hex) {
-    Ok(rgb) -> Ok(rgb_to_oklch(rgb))
-    Error(e) -> Error(e)
-  }
-}
-
 /// Convert an RGB color to a hex string.
 ///
 /// Output is `#RRGGBB` when alpha is 1.0, otherwise `#RRGGBBAA`.

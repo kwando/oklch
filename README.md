@@ -83,7 +83,6 @@ All constructors normalize/clamp inputs to safe ranges.
 - `oklch_to_rgb_clamped(color)`
 - `rgb_to_oklch(color)`
 - `oklch_to_hex(color)`
-- `hex_to_oklch(hex)`
 - `rgb_to_hex(color)`
 - `hex_to_rgb(hex)`
 
@@ -134,11 +133,13 @@ All constructors normalize/clamp inputs to safe ranges.
 
 ```gleam
 import oklch
+import gleam_community/colour
 import gleam/result
 
 pub fn main() {
   let assert Ok(rotated) =
-    oklch.hex_to_oklch("#3366FF")
+    colour.from_rgb_hex_string("#3366FF")
+    |> result.map(oklch.from_colour)
     |> result.map(oklch.rotate_hue(_, 45.0))
 
   oklch.oklch_to_css(rotated)

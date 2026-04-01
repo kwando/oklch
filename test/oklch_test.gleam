@@ -110,9 +110,13 @@ pub fn oklch_to_hex_test() {
   assert string.length(hex) == 7
 }
 
-pub fn hex_to_oklch_test() {
-  let result = oklch.hex_to_oklch("#FF0000")
+pub fn from_colour_with_hex_parse_test() {
+  let result = colour.from_rgb_hex_string("#FF0000")
   assert result |> result.is_ok
+
+  let assert Ok(parsed) = result
+  let converted = oklch.from_colour(parsed)
+  assert converted.l >. 0.0
 }
 
 pub fn hex_to_rgb_test() {
