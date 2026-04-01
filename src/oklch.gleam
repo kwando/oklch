@@ -190,13 +190,18 @@ pub fn rgb_to_oklch(color: Rgb) -> Oklch {
   Oklch(l: l, c: c, h: h, alpha: alpha)
 }
 
-/// Convert OKLCH color to hex string.
+/// Convert an OKLCH color to a hex string.
+///
+/// Output is `#RRGGBB` when alpha is 1.0, otherwise `#RRGGBBAA`.
+/// Channel bytes are rounded and uppercase.
 pub fn oklch_to_hex(color: Oklch) -> String {
   let rgb = oklch_to_rgb(color)
   rgb_to_hex(rgb)
 }
 
-/// Parse a hex string to OKLCH color.
+/// Parse a hex string to an OKLCH color.
+///
+/// Supports `#RGB`, `#RGBA`, `#RRGGBB`, and `#RRGGBBAA`.
 pub fn hex_to_oklch(hex: String) -> Result(Oklch, ParseError) {
   case hex_to_rgb(hex) {
     Ok(rgb) -> Ok(rgb_to_oklch(rgb))
@@ -204,7 +209,10 @@ pub fn hex_to_oklch(hex: String) -> Result(Oklch, ParseError) {
   }
 }
 
-/// Convert RGB color to hex string.
+/// Convert an RGB color to a hex string.
+///
+/// Output is `#RRGGBB` when alpha is 1.0, otherwise `#RRGGBBAA`.
+/// Channel bytes are rounded and uppercase.
 pub fn rgb_to_hex(color: Rgb) -> String {
   let Rgb(r: r, g: g, b: b, alpha: alpha) = color
 
@@ -377,11 +385,15 @@ pub fn mix(color1: Oklch, color2: Oklch, weight: Float) -> Oklch {
 }
 
 /// Get the complementary color (hue + 180deg).
+///
+/// Lightness, chroma, and alpha are preserved.
 pub fn complementary(color: Oklch) -> Oklch {
   rotate_hue(color, 180.0)
 }
 
 /// Get the two triadic colors (hue + 120deg and +240deg).
+///
+/// Lightness, chroma, and alpha are preserved.
 pub fn triadic(color: Oklch) -> #(Oklch, Oklch) {
   #(rotate_hue(color, 120.0), rotate_hue(color, 240.0))
 }
@@ -389,6 +401,7 @@ pub fn triadic(color: Oklch) -> #(Oklch, Oklch) {
 /// Get split complementary colors around the complement.
 ///
 /// For an angle of 30deg, this returns hues at +150deg and +210deg.
+/// Lightness, chroma, and alpha are preserved.
 pub fn split_complementary(color: Oklch, angle: Float) -> #(Oklch, Oklch) {
   let angle = clamp_h(angle)
   #(rotate_hue(color, 180.0 -. angle), rotate_hue(color, 180.0 +. angle))
@@ -397,6 +410,7 @@ pub fn split_complementary(color: Oklch, angle: Float) -> #(Oklch, Oklch) {
 /// Get analogous colors on both sides of the hue wheel.
 ///
 /// For an angle of 30deg, this returns hues at -30deg and +30deg.
+/// Lightness, chroma, and alpha are preserved.
 pub fn analogous(color: Oklch, angle: Float) -> #(Oklch, Oklch) {
   let angle = clamp_h(angle)
   #(rotate_hue(color, 0.0 -. angle), rotate_hue(color, angle))
@@ -418,11 +432,17 @@ pub fn has_hue(color: Oklch) -> Bool {
 }
 
 /// Check whether an OKLCH color is directly representable in sRGB gamut.
+///
+/// Returns `True` only when the converted RGB channels are all in `[0.0, 1.0]`
+/// before clamping.
 pub fn in_gamut(color: Oklch) -> Bool {
   is_in_gamut(color)
 }
 
 /// Map an OKLCH color into sRGB gamut and return it as OKLCH.
+///
+/// In-gamut colors are returned unchanged. Out-of-gamut colors are converted
+/// through the CSS-style gamut mapping path used by `oklch_to_rgb/1`.
 pub fn gamut_map(color: Oklch) -> Oklch {
   case is_in_gamut(color) {
     True -> color
@@ -431,6 +451,8 @@ pub fn gamut_map(color: Oklch) -> Oklch {
 }
 
 /// Calculate perceptual distance (deltaE OK) between two colors.
+///
+/// A value of `0.0` means the colors are identical in OKLab coordinates.
 pub fn distance(color1: Oklch, color2: Oklch) -> Float {
   delta_e_ok(color1, color2)
 }
