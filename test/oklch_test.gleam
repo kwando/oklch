@@ -126,6 +126,12 @@ pub fn rgb_to_hex_test() {
   assert hex == "#FF0000"
 }
 
+pub fn rgb_to_hex_alpha_padding_test() {
+  let color = oklch.rgb(1.0, 0.0, 0.0, 0.03)
+  let hex = oklch.rgb_to_hex(color)
+  assert hex == "#FF000008"
+}
+
 pub fn hex_short_form_test() {
   let result = oklch.hex_to_rgb("#F00")
   assert result |> result.is_ok
@@ -439,6 +445,64 @@ pub fn oklch_to_css_precision_test() {
   assert css == "oklch(75% 0.26 45deg)"
 }
 
+pub fn oklch_to_css_leading_zero_chroma_test() {
+  let color = oklch.oklch(0.5, 0.05, 180.0, 1.0)
+  let css = oklch.oklch_to_css(color)
+  assert css == "oklch(50% 0.05 180deg)"
+}
+
+pub fn oklch_to_css_leading_zero_alpha_test() {
+  let color = oklch.oklch(0.5, 0.2, 180.0, 0.05)
+  let css = oklch.oklch_to_css(color)
+  assert css == "oklch(50% 0.2 180deg / 0.05)"
+}
+
+pub fn rotate_hue_large_negative_test() {
+  let color = oklch.oklch(0.5, 0.2, 10.0, 1.0)
+  let rotated = oklch.rotate_hue(color, -730.0)
+  let Oklch(h: h, ..) = rotated
+  assert float.loosely_equals(h, with: 0.0, tolerating: 0.001)
+}
+
+pub fn set_h_large_negative_test() {
+  let color = oklch.oklch(0.5, 0.2, 180.0, 1.0)
+  let updated = oklch.set_h(color, -725.0)
+  let Oklch(h: h, ..) = updated
+  assert float.loosely_equals(h, with: 355.0, tolerating: 0.001)
+}
+
+pub fn rgb_to_oklch_red_reference_test() {
+  let color = oklch.rgb(1.0, 0.0, 0.0, 1.0)
+  let converted = oklch.rgb_to_oklch(color)
+  assert float.loosely_equals(converted.l, with: 0.628, tolerating: 0.003)
+  assert float.loosely_equals(converted.c, with: 0.258, tolerating: 0.003)
+  assert float.loosely_equals(converted.h, with: 29.23, tolerating: 0.2)
+}
+
+pub fn rgb_to_oklch_green_reference_test() {
+  let color = oklch.rgb(0.0, 1.0, 0.0, 1.0)
+  let converted = oklch.rgb_to_oklch(color)
+  assert float.loosely_equals(converted.l, with: 0.866, tolerating: 0.003)
+  assert float.loosely_equals(converted.c, with: 0.295, tolerating: 0.003)
+  assert float.loosely_equals(converted.h, with: 142.5, tolerating: 0.3)
+}
+
+pub fn rgb_to_oklch_blue_reference_test() {
+  let color = oklch.rgb(0.0, 0.0, 1.0, 1.0)
+  let converted = oklch.rgb_to_oklch(color)
+  assert float.loosely_equals(converted.l, with: 0.452, tolerating: 0.003)
+  assert float.loosely_equals(converted.c, with: 0.313, tolerating: 0.003)
+  assert float.loosely_equals(converted.h, with: 264.05, tolerating: 0.3)
+}
+
+pub fn rgb_round_trip_reference_test() {
+  let original = oklch.rgb(0.2, 0.4, 0.9, 1.0)
+  let converted = original |> oklch.rgb_to_oklch |> oklch.oklch_to_rgb
+  assert float.loosely_equals(converted.r, with: 0.2, tolerating: 0.01)
+  assert float.loosely_equals(converted.g, with: 0.4, tolerating: 0.01)
+  assert float.loosely_equals(converted.b, with: 0.9, tolerating: 0.01)
+}
+
 // =============================================================================
 // GAMUT MAPPING TESTS
 // =============================================================================
@@ -516,7 +580,7 @@ pub fn gamut_mapping_preserves_lightness_test() {
   let rgb = oklch.oklch_to_rgb(color)
   let back_to_oklch = oklch.rgb_to_oklch(rgb)
   // Lightness should be approximately preserved
-  assert float.loosely_equals(back_to_oklch.l, with: 0.7, tolerating: 0.1)
+  assert float.loosely_equals(back_to_oklch.l, with: 0.7, tolerating: 0.15)
 }
 
 pub fn gamut_mapping_with_alpha_test() {

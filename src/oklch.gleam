@@ -141,34 +141,13 @@ pub fn oklch_to_rgb(color: Oklch) -> Rgb {
 ///
 /// For CSS-compliant gamut mapping, use oklch_to_rgb/1 instead.
 pub fn oklch_to_rgb_clamped(color: Oklch) -> Rgb {
-  let Oklch(l: l, c: c, h: h, alpha: alpha) = color
-  let h_rad = h *. pi /. 180.0
-
-  let a = c *. cos(h_rad)
-  let b_val = c *. sin(h_rad)
-
-  let r = 1.0 *. l +. 0.3963377774 *. a +. 0.2158037573 *. b_val
-  let g = 1.0 *. l -. 0.1055613458 *. a -. 0.0638541728 *. b_val
-  let b = 1.0 *. l -. 0.0894841775 *. a -. 1.291485548 *. b_val
-
-  let r = linear_to_srgb(r)
-  let g = linear_to_srgb(g)
-  let b = linear_to_srgb(b)
-
-  let r = case r <. 0.0 {
-    True -> 0.0
-    False -> r
-  }
-  let g = case g <. 0.0 {
-    True -> 0.0
-    False -> g
-  }
-  let b = case b <. 0.0 {
-    True -> 0.0
-    False -> b
-  }
-
-  Rgb(r: r, g: g, b: b, alpha: alpha)
+  let Rgb(r: r, g: g, b: b, alpha: alpha) = oklch_to_rgb_raw(color)
+  Rgb(
+    r: float.clamp(r, 0.0, 1.0),
+    g: float.clamp(g, 0.0, 1.0),
+    b: float.clamp(b, 0.0, 1.0),
+    alpha: alpha,
+  )
 }
 
 /// Convert RGB color to OKLCH.
@@ -182,14 +161,21 @@ pub fn rgb_to_oklch(color: Rgb) -> Oklch {
   let g = srgb_to_linear(g)
   let b = srgb_to_linear(b)
 
-  let l = 0.2104542553 *. r +. 0.793617785 *. g -. 0.0040720468 *. b
-  let a_val = 1.9779984951 *. r -. 2.428592205 *. g +. 0.4505937099 *. b
-  let b_val = 0.0259040371 *. r +. 0.7827717662 *. g -. 0.808675766 *. b
+  let l = 0.4122214708 *. r +. 0.5363325363 *. g +. 0.0514459929 *. b
+  let m = 0.2119034982 *. r +. 0.6806995451 *. g +. 0.1073969566 *. b
+  let s = 0.0883024619 *. r +. 0.2817188376 *. g +. 0.6299787005 *. b
 
-  let l = case l <. 0.0 {
-    True -> 0.0
-    False -> l
-  }
+  let l_root = cube_root(l)
+  let m_root = cube_root(m)
+  let s_root = cube_root(s)
+
+  let l =
+    0.2104542553 *. l_root +. 0.793617785 *. m_root -. 0.0040720468 *. s_root
+  let a_val =
+    1.9779984951 *. l_root -. 2.428592205 *. m_root +. 0.4505937099 *. s_root
+  let b_val =
+    0.0259040371 *. l_root +. 0.7827717662 *. m_root -. 0.808675766 *. s_root
+
   let c = case float.square_root(a_val *. a_val +. b_val *. b_val) {
     Ok(v) -> v
     Error(_) -> 0.0
@@ -222,31 +208,14 @@ pub fn hex_to_oklch(hex: String) -> Result(Oklch, ParseError) {
 pub fn rgb_to_hex(color: Rgb) -> String {
   let Rgb(r: r, g: g, b: b, alpha: alpha) = color
 
-  let r_int = float.round(r *. 255.0)
-  let g_int = float.round(g *. 255.0)
-  let b_int = float.round(b *. 255.0)
+  let r_hex = to_hex_2(float.round(r *. 255.0))
+  let g_hex = to_hex_2(float.round(g *. 255.0))
+  let b_hex = to_hex_2(float.round(b *. 255.0))
 
-  let r_hex = int.to_base16(r_int)
-  let g_hex = int.to_base16(g_int)
-  let b_hex = int.to_base16(b_int)
-
-  let r_hex = case string.length(r_hex) == 1 {
-    True -> "0" <> r_hex
-    False -> r_hex
-  }
-  let g_hex = case string.length(g_hex) == 1 {
-    True -> "0" <> g_hex
-    False -> g_hex
-  }
-  let b_hex = case string.length(b_hex) == 1 {
-    True -> "0" <> b_hex
-    False -> b_hex
-  }
-
-  let hex_string = string.uppercase(r_hex <> g_hex <> b_hex)
+  let hex_string = r_hex <> g_hex <> b_hex
 
   case alpha <. 1.0 {
-    True -> "#" <> hex_string <> int.to_base16(float.round(alpha *. 255.0))
+    True -> "#" <> hex_string <> to_hex_2(float.round(alpha *. 255.0))
     False -> "#" <> hex_string
   }
 }
@@ -352,15 +321,7 @@ pub fn desaturate(color: Oklch, amount: Float) -> Oklch {
 /// Positive values rotate clockwise, negative counter-clockwise.
 pub fn rotate_hue(color: Oklch, degrees: Float) -> Oklch {
   let Oklch(l: l, c: c, h: h, alpha: alpha) = color
-  let new_h = h +. degrees
-  let new_h = case new_h <. 0.0 {
-    True -> new_h +. 360.0
-    False ->
-      case new_h >=. 360.0 {
-        True -> new_h -. 360.0 *. float.floor(new_h /. 360.0)
-        False -> new_h
-      }
-  }
+  let new_h = clamp_h(h +. degrees)
   Oklch(l: l, c: c, h: new_h, alpha: alpha)
 }
 
@@ -386,14 +347,7 @@ pub fn set_c(color: Oklch, c: Float) -> Oklch {
 /// Set the hue channel.
 pub fn set_h(color: Oklch, h: Float) -> Oklch {
   let Oklch(l: l, c: c, h: _, alpha: alpha) = color
-  let h = case h <. 0.0 {
-    True -> h +. 360.0
-    False ->
-      case h >=. 360.0 {
-        True -> h -. 360.0 *. float.floor(h /. 360.0)
-        False -> h
-      }
-  }
+  let h = clamp_h(h)
   Oklch(l: l, c: c, h: h, alpha: alpha)
 }
 
@@ -485,45 +439,32 @@ pub fn oklch_to_css(color: Oklch) -> String {
 }
 
 fn format_chroma(c: Float) -> String {
-  // Format chroma with up to 2 decimal places, removing trailing zeros
-  let c_rounded = float.round(c *. 100.0)
-  let c_whole = c_rounded / 100
-  let c_decimal = c_rounded % 100
-
-  case c_decimal {
-    0 -> int.to_string(c_whole)
-    _ -> {
-      // Remove trailing zeros (e.g., 20 -> 2)
-      let trimmed_decimal = trim_trailing_zeros(c_decimal)
-      int.to_string(c_whole) <> "." <> int.to_string(trimmed_decimal)
-    }
-  }
+  format_decimal_2(c)
 }
 
-fn trim_trailing_zeros(n: Int) -> Int {
-  case n {
-    0 -> 0
+fn format_alpha(alpha: Float) -> String {
+  format_decimal_2(alpha)
+}
+
+fn format_decimal_2(value: Float) -> String {
+  let rounded = float.round(value *. 100.0)
+  let whole = rounded / 100
+  let decimal = rounded % 100
+
+  case decimal {
+    0 -> int.to_string(whole)
     _ ->
-      case n % 10 {
-        0 -> trim_trailing_zeros(n / 10)
-        _ -> n
+      case decimal % 10 {
+        0 -> int.to_string(whole) <> "." <> int.to_string(decimal / 10)
+        _ -> int.to_string(whole) <> "." <> pad_2(decimal)
       }
   }
 }
 
-fn format_alpha(alpha: Float) -> String {
-  // Format alpha with up to 2 decimal places, removing trailing zeros
-  let alpha_rounded = float.round(alpha *. 100.0)
-  let alpha_whole = alpha_rounded / 100
-  let alpha_decimal = alpha_rounded % 100
-
-  case alpha_decimal {
-    0 -> int.to_string(alpha_whole)
-    _ -> {
-      // Remove trailing zeros (e.g., 50 -> 5)
-      let trimmed_decimal = trim_trailing_zeros(alpha_decimal)
-      int.to_string(alpha_whole) <> "." <> int.to_string(trimmed_decimal)
-    }
+fn pad_2(value: Int) -> String {
+  case value < 10 {
+    True -> "0" <> int.to_string(value)
+    False -> int.to_string(value)
   }
 }
 
@@ -703,13 +644,15 @@ fn srgb_to_linear(c: Float) -> Float {
         False -> c
       }
   }
-  let threshold = 0.04045 /. 12.92
+  let threshold = 0.04045
   case c <. threshold {
     True -> c /. 12.92
     False -> {
-      let tmp = c +. 0.055
-      let c = tmp /. 1.055
-      c *. c *. c
+      let c = { c +. 0.055 } /. 1.055
+      case float.power(c, 2.4) {
+        Ok(v) -> v
+        Error(_) -> 0.0
+      }
     }
   }
 }
@@ -722,7 +665,7 @@ fn linear_to_srgb(c: Float) -> Float {
   case c <. 0.0031308 {
     True -> c *. 12.92
     False -> {
-      case float.power(c, 1.0 /. 3.0) {
+      case float.power(c, 1.0 /. 2.4) {
         Ok(tmp) -> {
           let c = tmp *. 1.055 -. 0.055
           case c >. 1.0 {
@@ -762,6 +705,76 @@ fn float_to_256(f: Float) -> Int {
   float.clamp(f, 0.0, 1.0) *. 255.0 |> float.round
 }
 
+fn to_hex_2(value: Int) -> String {
+  let hex = int.clamp(value, 0, 255) |> int.to_base16 |> string.uppercase
+  case string.length(hex) == 1 {
+    True -> "0" <> hex
+    False -> hex
+  }
+}
+
+fn cube_root(x: Float) -> Float {
+  case x <. 0.0 {
+    True -> {
+      case float.power(0.0 -. x, 1.0 /. 3.0) {
+        Ok(v) -> 0.0 -. v
+        Error(_) -> 0.0
+      }
+    }
+    False -> {
+      case float.power(x, 1.0 /. 3.0) {
+        Ok(v) -> v
+        Error(_) -> 0.0
+      }
+    }
+  }
+}
+
+fn oklch_to_rgb_raw(color: Oklch) -> Rgb {
+  let Oklch(l: l, c: c, h: h, alpha: alpha) = color
+  let h_rad = h *. pi /. 180.0
+
+  let a = c *. cos(h_rad)
+  let b_val = c *. sin(h_rad)
+
+  let l_dash = l +. 0.3963377774 *. a +. 0.2158037573 *. b_val
+  let m_dash = l -. 0.1055613458 *. a -. 0.0638541728 *. b_val
+  let s_dash = l -. 0.0894841775 *. a -. 1.291485548 *. b_val
+
+  let l_linear = l_dash *. l_dash *. l_dash
+  let m_linear = m_dash *. m_dash *. m_dash
+  let s_linear = s_dash *. s_dash *. s_dash
+
+  let r_linear =
+    4.0767416621
+    *. l_linear
+    -. 3.3077115913
+    *. m_linear
+    +. 0.2309699292
+    *. s_linear
+  let g_linear =
+    2.6097574011
+    *. m_linear
+    -. 1.2684380046
+    *. l_linear
+    -. 0.3413193965
+    *. s_linear
+  let b_linear =
+    1.707614701
+    *. s_linear
+    -. 0.0041960863
+    *. l_linear
+    -. 0.7034186147
+    *. m_linear
+
+  Rgb(
+    r: linear_to_srgb(r_linear),
+    g: linear_to_srgb(g_linear),
+    b: linear_to_srgb(b_linear),
+    alpha: alpha,
+  )
+}
+
 // =============================================================================
 // GAMUT MAPPING HELPER FUNCTIONS
 // =============================================================================
@@ -775,7 +788,7 @@ const epsilon = 0.0001
 /// Check if an OKLCH color is within the sRGB gamut.
 /// Returns true if all RGB components are in the range [0.0, 1.0].
 fn is_in_gamut(color: Oklch) -> Bool {
-  let rgb = oklch_to_rgb_clamped(color)
+  let rgb = oklch_to_rgb_raw(color)
   let Rgb(r: r, g: g, b: b, ..) = rgb
   r >=. 0.0 && r <=. 1.0 && g >=. 0.0 && g <=. 1.0 && b >=. 0.0 && b <=. 1.0
 }
@@ -783,7 +796,7 @@ fn is_in_gamut(color: Oklch) -> Bool {
 /// Clip an OKLCH color to the sRGB gamut.
 /// Simply clamps RGB components to [0.0, 1.0].
 fn clip_to_gamut(color: Oklch) -> Oklch {
-  let rgb = oklch_to_rgb_clamped(color)
+  let rgb = oklch_to_rgb_raw(color)
   let Rgb(r: r, g: g, b: b, alpha: alpha) = rgb
   // Clamp each component to [0.0, 1.0]
   let r = float.clamp(r, 0.0, 1.0)
@@ -865,7 +878,10 @@ fn binary_search_chroma(
 ) -> Oklch {
   // Check if we've reached the desired precision
   case max_chroma -. min_chroma <=. epsilon {
-    True -> clip_to_gamut(original)
+    True -> {
+      let Oklch(h: h, alpha: alpha, ..) = original
+      clip_to_gamut(Oklch(l: l, c: min_chroma, h: h, alpha: alpha))
+    }
     False -> {
       let chroma = { min_chroma +. max_chroma } /. 2.0
       let current = Oklch(l: l, c: chroma, h: h, alpha: alpha)
