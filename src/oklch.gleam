@@ -2,6 +2,7 @@ import gleam/float
 import gleam/int
 import gleam/list
 import gleam/string
+import gleam_community/colour.{type Colour}
 
 // =============================================================================
 // TYPES
@@ -646,3 +647,20 @@ fn sin(x: Float) -> Float
 @external(erlang, "math", "atan2")
 @external(javascript, "Math", "atan2")
 fn atan2(y: Float, x: Float) -> Float
+
+// =============================================================================
+// GLEAM_COMMUNITY_COLOUR INTEGRATION
+// =============================================================================
+
+/// Convert a gleam_community_colour Colour to OKLCH.
+/// This conversion always succeeds.
+pub fn from_colour(colour: Colour) -> Oklch {
+  let #(r, g, b, a) = colour.to_rgba(colour)
+  rgb_to_oklch(Rgb(r: r, g: g, b: b, alpha: a))
+}
+
+/// Convert OKLCH to a gleam_community_colour Colour.
+pub fn to_colour(oklch_color: Oklch) -> Result(Colour, Nil) {
+  let Rgb(r: r, g: g, b: b, alpha: alpha) = oklch_to_rgb(oklch_color)
+  colour.from_rgba(r, g, b, alpha)
+}

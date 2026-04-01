@@ -1,6 +1,7 @@
 import gleam/float
 import gleam/result
 import gleam/string
+import gleam_community/colour
 import gleeunit
 import oklch.{Oklch, Rgb}
 
@@ -297,4 +298,33 @@ pub fn ansi_black_and_white_test() {
   assert string.contains(result, "X")
   assert string.contains(result, "\u{001b}[38;2;")
   assert string.contains(result, "\u{001b}[48;2;")
+}
+
+pub fn from_colour_test() {
+  let oklch_color = oklch.from_colour(colour.red)
+  let Oklch(l: l, c: c, h: h, alpha: alpha) = oklch_color
+  assert alpha == 1.0
+  assert l >. 0.0
+  assert l <. 1.0
+  assert c >=. 0.0
+  assert h >=. 0.0
+  assert h <. 360.0
+}
+
+pub fn to_colour_test() {
+  let oklch_color = oklch.oklch(0.5, 0.2, 180.0, 1.0)
+  let result = oklch.to_colour(oklch_color)
+  assert result |> result.is_ok
+}
+
+pub fn round_trip_colour_test() {
+  let original = colour.light_blue
+  let oklch_color = oklch.from_colour(original)
+  let assert Ok(converted_back) = oklch.to_colour(oklch_color)
+  let #(r1, g1, b1, a1) = colour.to_rgba(original)
+  let #(r2, g2, b2, a2) = colour.to_rgba(converted_back)
+  assert float.loosely_equals(r1, with: r2, tolerating: 0.01)
+  assert float.loosely_equals(g1, with: g2, tolerating: 0.01)
+  assert float.loosely_equals(b1, with: b2, tolerating: 0.01)
+  assert float.loosely_equals(a1, with: a2, tolerating: 0.001)
 }
