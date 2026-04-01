@@ -454,14 +454,8 @@ pub fn contrast_ratio(color1: Oklch, color2: Oklch) -> Float {
   let l1 = luminance(color1)
   let l2 = luminance(color2)
 
-  let lighter = case l1 >. l2 {
-    True -> l1
-    False -> l2
-  }
-  let darker = case l1 >. l2 {
-    True -> l2
-    False -> l1
-  }
+  let lighter = float.max(l1, l2)
+  let darker = float.min(l1, l2)
 
   let lighter = lighter +. 0.05
   let darker = darker +. 0.05
@@ -597,14 +591,7 @@ fn clamp_channel(c: Float) -> Float {
 }
 
 fn srgb_to_linear(c: Float) -> Float {
-  let c = case c <. 0.0 {
-    True -> 0.0
-    False ->
-      case c >. 1.0 {
-        True -> 1.0
-        False -> c
-      }
-  }
+  let c = float.clamp(c, 0.0, 1.0)
   let threshold = 0.04045
   case c <. threshold {
     True -> c /. 12.92
