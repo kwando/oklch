@@ -34,7 +34,7 @@ pub fn main() {
   |> io.println()
 }
 
-fn gradient(text, col1, col2) {
+fn gradient(text: String, col1: oklch.Oklch, col2: oklch.Oklch) -> String {
   let chars = string.to_graphemes(text)
   let splits = list.length(chars) - 1
 
@@ -46,13 +46,15 @@ fn gradient(text, col1, col2) {
   |> string.join("")
 }
 
-fn palette(hex, number_of_colors: Int) {
+fn palette(
+  hex: String,
+  number_of_colors: Int,
+) -> Result(List(oklch.Oklch), oklch.ParseError) {
   use color <- result.try(oklch.hex_to_oklch(hex))
 
   let diff = 360.0 /. int.to_float(number_of_colors)
 
-  int.range(0, number_of_colors - 1, [], fn(acc, index) {
-    [oklch.rotate_hue(color, int.to_float(index) *. diff), ..acc]
-  })
+  list.range(0, number_of_colors - 1)
+  |> list.map(fn(index) { oklch.rotate_hue(color, int.to_float(index) *. diff) })
   |> Ok
 }

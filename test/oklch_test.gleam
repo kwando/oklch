@@ -2,8 +2,7 @@ import gleam/float
 import gleam/result
 import gleam/string
 import gleeunit
-import oklch
-import oklch/types.{Oklch, Rgb}
+import oklch.{Oklch, Rgb}
 
 pub fn main() -> Nil {
   gleeunit.main()
