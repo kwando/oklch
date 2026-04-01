@@ -11,7 +11,7 @@ import gleam_community/colour.{type Colour}
 /// OKLCH color representation.
 ///
 /// - `l`: Lightness (0.0 = black, 1.0 = white)
-/// - `c`: Chroma/saturation (0.0 = neutral gray, 0.4 = maximum)
+/// - `c`: Chroma/saturation (0.0 = neutral gray, can exceed 0.4 for wide-gamut colors)
 /// - `h`: Hue in degrees (0-360, where 0=red, 120=green, 240=blue)
 /// - `alpha`: Opacity (0.0 = transparent, 1.0 = opaque)
 pub type Oklch {
@@ -58,7 +58,7 @@ const ansi_bg_prefix = "\u{001b}[48;2;"
 ///
 /// Values outside valid ranges are clamped:
 /// - L is clamped to 0.0-1.0
-/// - C is clamped to 0.0-0.4
+/// - C is clamped to 0.0 or greater (no upper bound)
 /// - H wraps around (e.g., 400 becomes 40)
 /// - Alpha is clamped to 0.0-1.0
 pub fn oklch(l: Float, c: Float, h: Float, alpha: Float) -> Oklch {
@@ -297,19 +297,11 @@ pub fn darken(color: Oklch, amount: Float) -> Oklch {
 }
 
 /// Increase chroma (saturation).
-/// Clamps to 0.4 if exceeded.
+/// Values below 0.0 are clamped to 0.0, no upper bound.
 pub fn saturate(color: Oklch, amount: Float) -> Oklch {
   let Oklch(l: l, c: c, h: h, alpha: alpha) = color
   let new_c = c +. amount
-  let new_c = case new_c >. 0.4 {
-    True -> 0.4
-    False ->
-      case new_c <. 0.0 {
-        True -> 0.0
-        False -> new_c
-      }
-  }
-  Oklch(l: l, c: new_c, h: h, alpha: alpha)
+  Oklch(l: l, c: float.max(new_c, 0.0), h: h, alpha: alpha)
 }
 
 /// Decrease chroma (saturation).
@@ -347,9 +339,10 @@ pub fn set_l(color: Oklch, l: Float) -> Oklch {
 }
 
 /// Set the chroma (saturation) channel.
+/// Values below 0.0 are clamped to 0.0, no upper bound.
 pub fn set_c(color: Oklch, c: Float) -> Oklch {
   let Oklch(l: l, c: _, h: h, alpha: alpha) = color
-  Oklch(l: l, c: float.clamp(c, 0.0, 0.4), h: h, alpha: alpha)
+  Oklch(l: l, c: float.max(c, 0.0), h: h, alpha: alpha)
 }
 
 /// Set the hue channel.
@@ -396,6 +389,104 @@ pub fn mix(color1: Oklch, color2: Oklch, weight: Float) -> Oklch {
 pub fn luminance(color: Oklch) -> Float {
   let Oklch(l: l, c: _, h: _, alpha: _) = color
   l
+}
+
+/// Check if the color has a meaningful hue.
+/// Returns False when chroma is 0 (achromatic colors like grays).
+/// Per CSS spec, hue is "none" when chroma is 0.
+pub fn has_hue(color: Oklch) -> Bool {
+  let Oklch(c: c, ..) = color
+  c >. 0.0
+}
+
+/// Serialize OKLCH color to CSS string format.
+/// 
+/// Output format: "oklch(50% 0.2 180deg)" or "oklch(50% 0.2 180deg / 0.5)"
+/// - Lightness is shown as percentage (0% - 100%)
+/// - Chroma is shown as a number (no unit, can exceed 0.4)
+/// - Hue is shown as degrees or "none" when chroma is 0
+/// - Alpha is only shown when less than 1.0
+/// 
+/// ## Examples
+/// ```gleam
+/// oklch_to_css(oklch(0.5, 0.2, 180.0, 1.0))
+/// // -> "oklch(50% 0.2 180deg)"
+/// 
+/// oklch_to_css(oklch(0.5, 0.0, 0.0, 1.0))
+/// // -> "oklch(50% 0 none)"
+/// 
+/// oklch_to_css(oklch(0.5, 0.2, 180.0, 0.5))
+/// // -> "oklch(50% 0.2 180deg / 0.5)"
+/// ```
+pub fn oklch_to_css(color: Oklch) -> String {
+  let Oklch(l: l, c: c, h: h, alpha: alpha) = color
+
+  // Format lightness as percentage
+  let l_pct = float.round(l *. 100.0)
+
+  // Format chroma (2 decimal places max)
+  let c_str = format_chroma(c)
+
+  // Format hue or "none" when achromatic
+  let h_str = case has_hue(color) {
+    True -> float.round(h) |> int.to_string() <> "deg"
+    False -> "none"
+  }
+
+  // Build base string
+  let base = "oklch(" <> int.to_string(l_pct) <> "% " <> c_str <> " " <> h_str
+
+  // Add alpha if not fully opaque
+  case alpha <. 1.0 {
+    True -> {
+      let alpha_str = format_alpha(alpha)
+      base <> " / " <> alpha_str <> ")"
+    }
+    False -> base <> ")"
+  }
+}
+
+fn format_chroma(c: Float) -> String {
+  // Format chroma with up to 2 decimal places, removing trailing zeros
+  let c_rounded = float.round(c *. 100.0)
+  let c_whole = c_rounded / 100
+  let c_decimal = c_rounded % 100
+
+  case c_decimal {
+    0 -> int.to_string(c_whole)
+    _ -> {
+      // Remove trailing zeros (e.g., 20 -> 2)
+      let trimmed_decimal = trim_trailing_zeros(c_decimal)
+      int.to_string(c_whole) <> "." <> int.to_string(trimmed_decimal)
+    }
+  }
+}
+
+fn trim_trailing_zeros(n: Int) -> Int {
+  case n {
+    0 -> 0
+    _ ->
+      case n % 10 {
+        0 -> trim_trailing_zeros(n / 10)
+        _ -> n
+      }
+  }
+}
+
+fn format_alpha(alpha: Float) -> String {
+  // Format alpha with up to 2 decimal places, removing trailing zeros
+  let alpha_rounded = float.round(alpha *. 100.0)
+  let alpha_whole = alpha_rounded / 100
+  let alpha_decimal = alpha_rounded % 100
+
+  case alpha_decimal {
+    0 -> int.to_string(alpha_whole)
+    _ -> {
+      // Remove trailing zeros (e.g., 50 -> 5)
+      let trimmed_decimal = trim_trailing_zeros(alpha_decimal)
+      int.to_string(alpha_whole) <> "." <> int.to_string(trimmed_decimal)
+    }
+  }
 }
 
 /// Calculate the contrast ratio between two colors using WCAG formula.
@@ -523,7 +614,8 @@ fn clamp_l(l: Float) -> Float {
 }
 
 fn clamp_c(c: Float) -> Float {
-  float.clamp(c, 0.0, 0.4)
+  // Only enforce lower bound (0.0), no upper bound per CSS spec
+  float.max(c, 0.0)
 }
 
 fn clamp_h(h: Float) -> Float {

@@ -29,10 +29,12 @@ pub fn oklch_clamp_l_test() {
 }
 
 pub fn oklch_clamp_c_test() {
+  // High chroma values are NOT clamped (CSS allows values > 0.4)
   let color = oklch.oklch(0.5, 0.5, 180.0, 1.0)
   let Oklch(c: c, ..) = color
-  assert c == 0.4
+  assert c == 0.5
 
+  // Negative chroma is still clamped to 0.0
   let color = oklch.oklch(0.5, -0.1, 180.0, 1.0)
   let Oklch(c: c, ..) = color
   assert c == 0.0
@@ -156,6 +158,12 @@ pub fn saturate_test() {
   let saturated = oklch.saturate(color, 0.1)
   let Oklch(c: c, ..) = saturated
   assert float.loosely_equals(c, with: 0.2, tolerating: 0.001)
+
+  // Saturation has no upper bound (can exceed 0.4)
+  let color = oklch.oklch(0.5, 0.3, 180.0, 1.0)
+  let saturated = oklch.saturate(color, 0.3)
+  let Oklch(c: c, ..) = saturated
+  assert float.loosely_equals(c, with: 0.6, tolerating: 0.001)
 }
 
 pub fn desaturate_test() {
@@ -198,6 +206,16 @@ pub fn set_c_test() {
   let result = oklch.set_c(color, 0.35)
   let Oklch(c: c, ..) = result
   assert c == 0.35
+
+  // Values above 0.4 are allowed (no upper clamp)
+  let result = oklch.set_c(color, 0.6)
+  let Oklch(c: c, ..) = result
+  assert c == 0.6
+
+  // Negative values clamp to 0.0
+  let result = oklch.set_c(color, -0.1)
+  let Oklch(c: c, ..) = result
+  assert c == 0.0
 }
 
 pub fn set_h_test() {
@@ -327,4 +345,96 @@ pub fn round_trip_colour_test() {
   assert float.loosely_equals(g1, with: g2, tolerating: 0.01)
   assert float.loosely_equals(b1, with: b2, tolerating: 0.01)
   assert float.loosely_equals(a1, with: a2, tolerating: 0.001)
+}
+
+// =============================================================================
+// HIGH CHROMA TESTS (no upper clamp)
+// =============================================================================
+
+pub fn high_chroma_test() {
+  let color = oklch.oklch(0.5, 0.6, 180.0, 1.0)
+  let Oklch(c: c, ..) = color
+  assert c == 0.6
+}
+
+pub fn very_high_chroma_test() {
+  let color = oklch.oklch(0.5, 1.0, 180.0, 1.0)
+  let Oklch(c: c, ..) = color
+  assert c == 1.0
+}
+
+// =============================================================================
+// HAS_HUE TESTS
+// =============================================================================
+
+pub fn has_hue_with_chroma_test() {
+  let color = oklch.oklch(0.5, 0.2, 180.0, 1.0)
+  assert oklch.has_hue(color) == True
+}
+
+pub fn has_hue_no_chroma_test() {
+  let color = oklch.oklch(0.5, 0.0, 180.0, 1.0)
+  // Gray color has no meaningful hue
+  assert oklch.has_hue(color) == False
+}
+
+pub fn has_hue_almost_zero_chroma_test() {
+  let color = oklch.oklch(0.5, 0.0001, 180.0, 1.0)
+  // Very small chroma still has a hue
+  assert oklch.has_hue(color) == True
+}
+
+// =============================================================================
+// CSS SERIALIZATION TESTS
+// =============================================================================
+
+pub fn oklch_to_css_basic_test() {
+  let color = oklch.oklch(0.5, 0.2, 180.0, 1.0)
+  let css = oklch.oklch_to_css(color)
+  assert css == "oklch(50% 0.2 180deg)"
+}
+
+pub fn oklch_to_css_high_chroma_test() {
+  // Chroma can exceed 0.4 (no clamping)
+  let color = oklch.oklch(0.5, 0.6, 180.0, 1.0)
+  let css = oklch.oklch_to_css(color)
+  assert css == "oklch(50% 0.6 180deg)"
+}
+
+pub fn oklch_to_css_with_alpha_test() {
+  let color = oklch.oklch(0.5, 0.2, 180.0, 0.5)
+  let css = oklch.oklch_to_css(color)
+  assert css == "oklch(50% 0.2 180deg / 0.5)"
+}
+
+pub fn oklch_to_css_no_hue_test() {
+  // Gray color has no hue, outputs "none"
+  let color = oklch.oklch(0.5, 0.0, 0.0, 1.0)
+  let css = oklch.oklch_to_css(color)
+  assert css == "oklch(50% 0 none)"
+}
+
+pub fn oklch_to_css_no_hue_with_alpha_test() {
+  let color = oklch.oklch(0.5, 0.0, 0.0, 0.5)
+  let css = oklch.oklch_to_css(color)
+  assert css == "oklch(50% 0 none / 0.5)"
+}
+
+pub fn oklch_to_css_white_test() {
+  let color = oklch.oklch(1.0, 0.0, 0.0, 1.0)
+  let css = oklch.oklch_to_css(color)
+  assert css == "oklch(100% 0 none)"
+}
+
+pub fn oklch_to_css_black_test() {
+  let color = oklch.oklch(0.0, 0.0, 0.0, 1.0)
+  let css = oklch.oklch_to_css(color)
+  assert css == "oklch(0% 0 none)"
+}
+
+pub fn oklch_to_css_precision_test() {
+  // Test with values that require rounding
+  let color = oklch.oklch(0.7534, 0.2567, 45.3, 1.0)
+  let css = oklch.oklch_to_css(color)
+  assert css == "oklch(75% 0.26 45deg)"
 }
