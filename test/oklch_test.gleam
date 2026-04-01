@@ -110,20 +110,6 @@ pub fn oklch_to_hex_test() {
   assert string.length(hex) == 7
 }
 
-pub fn from_colour_with_hex_parse_test() {
-  let result = colour.from_rgb_hex_string("#FF0000")
-  assert result |> result.is_ok
-
-  let assert Ok(parsed) = result
-  let converted = oklch.from_colour(parsed)
-  assert converted.l >. 0.0
-}
-
-pub fn hex_to_rgb_test() {
-  let result = oklch.hex_to_rgb("#FF0000")
-  assert result |> result.is_ok
-}
-
 pub fn rgb_to_hex_test() {
   let color = oklch.rgb(1.0, 0.0, 0.0, 1.0)
   let hex = oklch.rgb_to_hex(color)
@@ -134,19 +120,6 @@ pub fn rgb_to_hex_alpha_padding_test() {
   let color = oklch.rgb(1.0, 0.0, 0.0, 0.03)
   let hex = oklch.rgb_to_hex(color)
   assert hex == "#FF000008"
-}
-
-pub fn hex_short_form_test() {
-  let result = oklch.hex_to_rgb("#F00")
-  assert result |> result.is_ok
-
-  let result = oklch.hex_to_rgb("#F00F")
-  assert result |> result.is_ok
-}
-
-pub fn hex_invalid_length_test() {
-  let result = oklch.hex_to_rgb("#FFFFFFF")
-  assert result |> result.is_error
 }
 
 pub fn lighten_test() {

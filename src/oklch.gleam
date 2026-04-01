@@ -1,6 +1,5 @@
 import gleam/float
 import gleam/int
-import gleam/list
 import gleam/string
 import gleam_community/colour.{type Colour}
 
@@ -26,16 +25,6 @@ pub type Oklch {
 /// - `alpha`: Opacity (0.0 = transparent, 1.0 = opaque)
 pub type Rgb {
   Rgb(r: Float, g: Float, b: Float, alpha: Float)
-}
-
-/// Errors that can occur when parsing hex color strings.
-pub type ParseError {
-  /// The hex string has an invalid length (not 3, 4, 6, or 8 characters).
-  InvalidHexLength
-  /// The hex string contains invalid hexadecimal characters.
-  InvalidHexValue
-  /// A color channel value is outside the valid range.
-  InvalidChannelValue
 }
 
 // =============================================================================
@@ -215,71 +204,6 @@ pub fn rgb_to_hex(color: Rgb) -> String {
   case alpha <. 1.0 {
     True -> "#" <> hex_string <> to_hex_2(float.round(alpha *. 255.0))
     False -> "#" <> hex_string
-  }
-}
-
-/// Parse a hex string to RGB color.
-///
-/// Supports #RGB, #RGBA, #RRGGBB, #RRGGBBAA formats.
-pub fn hex_to_rgb(hex: String) -> Result(Rgb, ParseError) {
-  let hex = string.trim(hex)
-
-  let hex = case string.starts_with(hex, "#") {
-    True -> string.drop_start(hex, 1)
-    False -> hex
-  }
-
-  let chars = string.to_graphemes(hex)
-  let len = list.length(chars)
-
-  case len {
-    3 -> {
-      case chars {
-        [r, g, b] -> {
-          let r = string.append(r, r)
-          let g = string.append(g, g)
-          let b = string.append(b, b)
-          parse_hex_rgb(r, g, b, "FF")
-        }
-        _ -> Error(InvalidHexLength)
-      }
-    }
-    4 -> {
-      case chars {
-        [r, g, b, a] -> {
-          let r = string.append(r, r)
-          let g = string.append(g, g)
-          let b = string.append(b, b)
-          let a = string.append(a, a)
-          parse_hex_rgb(r, g, b, a)
-        }
-        _ -> Error(InvalidHexLength)
-      }
-    }
-    6 -> {
-      case chars {
-        [r1, r2, g1, g2, b1, b2] -> {
-          let r = string.append(r1, r2)
-          let g = string.append(g1, g2)
-          let b = string.append(b1, b2)
-          parse_hex_rgb(r, g, b, "FF")
-        }
-        _ -> Error(InvalidHexLength)
-      }
-    }
-    8 -> {
-      case chars {
-        [r1, r2, g1, g2, b1, b2, a1, a2] -> {
-          let r = string.append(r1, r2)
-          let g = string.append(g1, g2)
-          let b = string.append(b1, b2)
-          let a = string.append(a1, a2)
-          parse_hex_rgb(r, g, b, a)
-        }
-        _ -> Error(InvalidHexLength)
-      }
-    }
-    _ -> Error(InvalidHexLength)
   }
 }
 
@@ -670,25 +594,6 @@ fn clamp_alpha(alpha: Float) -> Float {
 
 fn clamp_channel(c: Float) -> Float {
   float.clamp(c, 0.0, 1.0)
-}
-
-fn parse_hex_rgb(
-  r_hex: String,
-  g_hex: String,
-  b_hex: String,
-  a_hex: String,
-) -> Result(Rgb, ParseError) {
-  case
-    int.base_parse(r_hex, 16),
-    int.base_parse(g_hex, 16),
-    int.base_parse(b_hex, 16),
-    int.base_parse(a_hex, 16)
-  {
-    Ok(r), Ok(g), Ok(b), Ok(a) -> {
-      Ok(rgb_from_ints(r, g, b, int.to_float(a) /. 255.0))
-    }
-    _, _, _, _ -> Error(InvalidHexValue)
-  }
 }
 
 fn srgb_to_linear(c: Float) -> Float {

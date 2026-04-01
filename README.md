@@ -84,7 +84,6 @@ All constructors normalize/clamp inputs to safe ranges.
 - `rgb_to_oklch(color)`
 - `oklch_to_hex(color)`
 - `rgb_to_hex(color)`
-- `hex_to_rgb(hex)`
 
 ### Manipulation
 

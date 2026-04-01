@@ -8,12 +8,12 @@ import oklch
 
 pub fn main() {
   let assert Ok(a) =
-    oklch.hex_to_rgb("#660000")
-    |> result.map(oklch.rgb_to_oklch)
+    colour.from_rgb_hex_string("#660000")
+    |> result.map(oklch.from_colour)
     |> result.map(oklch.rotate_hue(_, 180.0))
   let assert Ok(b) =
-    oklch.hex_to_rgb("#000066")
-    |> result.map(oklch.rgb_to_oklch)
+    colour.from_rgb_hex_string("#000066")
+    |> result.map(oklch.from_colour)
 
   oklch.ansi_bg(a, "HELLO WORLD")
   |> io.println()
