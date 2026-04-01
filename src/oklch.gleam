@@ -96,13 +96,51 @@ pub fn rgb_from_ints(r: Int, g: Int, b: Int, alpha: Float) -> Rgb {
 // CONVERSION FUNCTIONS
 // =============================================================================
 
-/// Convert OKLCH color to RGB.
-/// 
-/// Uses the OKLAB color space as an intermediate step:
-/// OKLCH -> OKLAB -> Linear RGB -> sRGB
-/// 
-/// Negative RGB values are clamped to 0.
+/// Convert OKLCH color to RGB using CSS gamut mapping.
+///
+/// Uses the CSS Color Module Level 4 gamut mapping algorithm:
+/// "Binary Search Gamut Mapping with Local MINDE"
+/// https://www.w3.org/TR/css-color-4/#gamut-mapping
+///
+/// This algorithm preserves lightness and hue while reducing chroma
+/// to bring out-of-gamut colors into the sRGB gamut. The result is
+/// perceptually closer to the original color than simple clamping.
+///
+/// For colors already within the sRGB gamut, no modification is made.
+/// For colors outside the gamut, chroma is reduced until the color
+/// fits within sRGB or until the difference between the clipped and
+/// target color is below the Just Noticeable Difference (JND) threshold.
 pub fn oklch_to_rgb(color: Oklch) -> Rgb {
+  // Handle edge cases first (white and black)
+  let Oklch(l: l, c: _, h: _, alpha: alpha) = color
+
+  // If lightness >= 100%, return white
+  case l >=. 1.0 {
+    True -> Rgb(r: 1.0, g: 1.0, b: 1.0, alpha: alpha)
+    False -> {
+      // If lightness <= 0%, return black
+      case l <=. 0.0 {
+        True -> Rgb(r: 0.0, g: 0.0, b: 0.0, alpha: alpha)
+        False -> {
+          // Check if already in gamut
+          case is_in_gamut(color) {
+            True -> oklch_to_rgb_clamped(color)
+            False -> gamut_map_oklch_to_rgb(color)
+          }
+        }
+      }
+    }
+  }
+}
+
+/// Convert OKLCH color to RGB using simple clamping.
+///
+/// This is the original behavior that simply clamps negative RGB values
+/// to 0.0 and values > 1.0 to 1.0. This is faster but produces less
+/// perceptually accurate results than the gamut mapping algorithm.
+///
+/// For CSS-compliant gamut mapping, use oklch_to_rgb/1 instead.
+pub fn oklch_to_rgb_clamped(color: Oklch) -> Rgb {
   let Oklch(l: l, c: c, h: h, alpha: alpha) = color
   let h_rad = h *. pi /. 180.0
 
@@ -722,6 +760,207 @@ fn lerp_angle(a: Float, b: Float, t: Float) -> Float {
 
 fn float_to_256(f: Float) -> Int {
   float.clamp(f, 0.0, 1.0) *. 255.0 |> float.round
+}
+
+// =============================================================================
+// GAMUT MAPPING HELPER FUNCTIONS
+// =============================================================================
+// These functions implement CSS Color Module Level 4 gamut mapping:
+// https://www.w3.org/TR/css-color-4/#gamut-mapping
+
+const jnd = 0.02
+
+const epsilon = 0.0001
+
+/// Check if an OKLCH color is within the sRGB gamut.
+/// Returns true if all RGB components are in the range [0.0, 1.0].
+fn is_in_gamut(color: Oklch) -> Bool {
+  let rgb = oklch_to_rgb_clamped(color)
+  let Rgb(r: r, g: g, b: b, ..) = rgb
+  r >=. 0.0 && r <=. 1.0 && g >=. 0.0 && g <=. 1.0 && b >=. 0.0 && b <=. 1.0
+}
+
+/// Clip an OKLCH color to the sRGB gamut.
+/// Simply clamps RGB components to [0.0, 1.0].
+fn clip_to_gamut(color: Oklch) -> Oklch {
+  let rgb = oklch_to_rgb_clamped(color)
+  let Rgb(r: r, g: g, b: b, alpha: alpha) = rgb
+  // Clamp each component to [0.0, 1.0]
+  let r = float.clamp(r, 0.0, 1.0)
+  let g = float.clamp(g, 0.0, 1.0)
+  let b = float.clamp(b, 0.0, 1.0)
+  // Convert back to OKLCH
+  rgb_to_oklch(Rgb(r: r, g: g, b: b, alpha: alpha))
+}
+
+/// Calculate the deltaEOK (color difference) between two OKLCH colors.
+/// This is the perceptual color difference metric used in OKLCH.
+fn delta_e_ok(color1: Oklch, color2: Oklch) -> Float {
+  let Oklch(l: l1, c: c1, h: h1, ..) = color1
+  let Oklch(l: l2, c: c2, h: h2, ..) = color2
+
+  // Convert to Oklab (rectangular) coordinates for deltaE calculation
+  let h1_rad = h1 *. pi /. 180.0
+  let h2_rad = h2 *. pi /. 180.0
+
+  let a1 = c1 *. cos(h1_rad)
+  let b1 = c1 *. sin(h1_rad)
+
+  let a2 = c2 *. cos(h2_rad)
+  let b2 = c2 *. sin(h2_rad)
+
+  // Euclidean distance in Oklab space
+  let dl = l1 -. l2
+  let da = a1 -. a2
+  let db = b1 -. b2
+
+  case float.square_root(dl *. dl +. da *. da +. db *. db) {
+    Ok(v) -> v
+    Error(_) -> 0.0
+  }
+}
+
+/// Gamut map an OKLCH color to RGB using CSS algorithm.
+/// Uses binary search with Local MINDE to find optimal chroma reduction.
+fn gamut_map_oklch_to_rgb(color: Oklch) -> Rgb {
+  let Oklch(l: l, c: original_c, h: h, alpha: alpha) = color
+
+  // Initialize binary search bounds
+  let min_chroma = 0.0
+  let max_chroma = original_c
+  let min_in_gamut = True
+
+  // Get the clipped version of the original color
+  let clipped = clip_to_gamut(color)
+  let e = delta_e_ok(clipped, color)
+
+  // If already within JND, return the clipped version
+  case e <. jnd {
+    True -> oklch_to_rgb_clamped(clipped)
+    False -> {
+      // Binary search for optimal chroma
+      let result =
+        binary_search_chroma(
+          color,
+          min_chroma,
+          max_chroma,
+          min_in_gamut,
+          l,
+          h,
+          alpha,
+        )
+      oklch_to_rgb_clamped(result)
+    }
+  }
+}
+
+fn binary_search_chroma(
+  original: Oklch,
+  min_chroma: Float,
+  max_chroma: Float,
+  min_in_gamut: Bool,
+  l: Float,
+  h: Float,
+  alpha: Float,
+) -> Oklch {
+  // Check if we've reached the desired precision
+  case max_chroma -. min_chroma <=. epsilon {
+    True -> clip_to_gamut(original)
+    False -> {
+      let chroma = { min_chroma +. max_chroma } /. 2.0
+      let current = Oklch(l: l, c: chroma, h: h, alpha: alpha)
+
+      case min_in_gamut {
+        True -> {
+          // Check if current is in gamut
+          case is_in_gamut(current) {
+            True -> {
+              // Still in gamut, can increase chroma
+              binary_search_chroma(
+                original,
+                chroma,
+                max_chroma,
+                True,
+                l,
+                h,
+                alpha,
+              )
+            }
+            False -> {
+              // Out of gamut, need to reduce
+              let clipped = clip_to_gamut(current)
+              let e = delta_e_ok(clipped, current)
+
+              case e <. jnd {
+                True -> {
+                  case jnd -. e <=. epsilon {
+                    True -> clipped
+                    False ->
+                      binary_search_chroma(
+                        original,
+                        chroma,
+                        max_chroma,
+                        False,
+                        l,
+                        h,
+                        alpha,
+                      )
+                  }
+                }
+                False -> {
+                  // E >= JND, reduce max
+                  binary_search_chroma(
+                    original,
+                    min_chroma,
+                    chroma,
+                    min_in_gamut,
+                    l,
+                    h,
+                    alpha,
+                  )
+                }
+              }
+            }
+          }
+        }
+        False -> {
+          // min_in_gamut is false, always do local MINDE check
+          let clipped = clip_to_gamut(current)
+          let e = delta_e_ok(clipped, current)
+
+          case e <. jnd {
+            True -> {
+              case jnd -. e <=. epsilon {
+                True -> clipped
+                False ->
+                  binary_search_chroma(
+                    original,
+                    chroma,
+                    max_chroma,
+                    False,
+                    l,
+                    h,
+                    alpha,
+                  )
+              }
+            }
+            False -> {
+              // E >= JND, reduce max
+              binary_search_chroma(
+                original,
+                min_chroma,
+                chroma,
+                min_in_gamut,
+                l,
+                h,
+                alpha,
+              )
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 // =============================================================================

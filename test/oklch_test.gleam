@@ -438,3 +438,91 @@ pub fn oklch_to_css_precision_test() {
   let css = oklch.oklch_to_css(color)
   assert css == "oklch(75% 0.26 45deg)"
 }
+
+// =============================================================================
+// GAMUT MAPPING TESTS
+// =============================================================================
+
+pub fn oklch_to_rgb_in_gamut_test() {
+  // Color already in gamut should return reasonable RGB values
+  let color = oklch.oklch(0.5, 0.2, 180.0, 1.0)
+  let rgb = oklch.oklch_to_rgb(color)
+  // Verify RGB values are in valid range
+  let Rgb(r, g, b, a) = rgb
+  assert r >=. 0.0 && r <=. 1.0
+  assert g >=. 0.0 && g <=. 1.0
+  assert b >=. 0.0 && b <=. 1.0
+  assert a == 1.0
+}
+
+pub fn oklch_to_rgb_out_of_gamut_test() {
+  // High chroma color that exceeds sRGB should be gamut mapped
+  let color = oklch.oklch(0.5, 0.5, 180.0, 1.0)
+  let rgb = oklch.oklch_to_rgb(color)
+  // All RGB components should be in valid range
+  let Rgb(r, g, b, a) = rgb
+  assert r >=. 0.0 && r <=. 1.0
+  assert g >=. 0.0 && g <=. 1.0
+  assert b >=. 0.0 && b <=. 1.0
+  assert a == 1.0
+}
+
+pub fn oklch_to_rgb_white_test() {
+  // Lightness >= 100% should return white
+  let color = oklch.oklch(1.0, 0.5, 180.0, 1.0)
+  let rgb = oklch.oklch_to_rgb(color)
+  let Rgb(r, g, b, a) = rgb
+  assert r == 1.0
+  assert g == 1.0
+  assert b == 1.0
+  assert a == 1.0
+}
+
+pub fn oklch_to_rgb_black_test() {
+  // Lightness <= 0% should return black
+  let color = oklch.oklch(0.0, 0.5, 180.0, 1.0)
+  let rgb = oklch.oklch_to_rgb(color)
+  let Rgb(r, g, b, a) = rgb
+  assert r == 0.0
+  assert g == 0.0
+  assert b == 0.0
+  assert a == 1.0
+}
+
+pub fn oklch_to_rgb_clamped_test() {
+  // Old behavior: simple clamp should work
+  let color = oklch.oklch(0.5, 0.5, 180.0, 1.0)
+  let rgb = oklch.oklch_to_rgb_clamped(color)
+  // Just verify it works and returns valid RGB
+  let Rgb(r, g, b, a) = rgb
+  assert r >=. 0.0 && r <=. 1.0
+  assert g >=. 0.0 && g <=. 1.0
+  assert b >=. 0.0 && b <=. 1.0
+  assert a == 1.0
+}
+
+pub fn gamut_mapping_preserves_hue_test() {
+  // Verify that gamut mapping preserves hue approximately
+  let color = oklch.oklch(0.5, 0.6, 120.0, 1.0)
+  let rgb = oklch.oklch_to_rgb(color)
+  let back_to_oklch = oklch.rgb_to_oklch(rgb)
+  // Hue should be approximately preserved (within 30 degrees tolerance)
+  assert float.loosely_equals(back_to_oklch.h, with: 120.0, tolerating: 30.0)
+}
+
+pub fn gamut_mapping_preserves_lightness_test() {
+  // Verify that gamut mapping preserves lightness
+  let color = oklch.oklch(0.7, 0.5, 180.0, 1.0)
+  let rgb = oklch.oklch_to_rgb(color)
+  let back_to_oklch = oklch.rgb_to_oklch(rgb)
+  // Lightness should be approximately preserved
+  assert float.loosely_equals(back_to_oklch.l, with: 0.7, tolerating: 0.1)
+}
+
+pub fn gamut_mapping_with_alpha_test() {
+  // Gamut mapping should preserve alpha
+  let color = oklch.oklch(0.5, 0.6, 180.0, 0.5)
+  let rgb = oklch.oklch_to_rgb(color)
+  let Rgb(r: _, g: _, b: _, alpha: a) = rgb
+  assert a == 0.5
+}
