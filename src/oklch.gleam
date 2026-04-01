@@ -285,11 +285,7 @@ pub fn hex_to_rgb(hex: String) -> Result(Rgb, ParseError) {
 /// Clamps to 1.0 if the result exceeds.
 pub fn lighten(color: Oklch, amount: Float) -> Oklch {
   let Oklch(l: l, c: c, h: h, alpha: alpha) = color
-  let new_l = l +. amount
-  let new_l = case new_l >. 1.0 {
-    True -> 1.0
-    False -> new_l
-  }
+  let new_l = float.clamp(l +. amount, 0.0, 1.0)
   Oklch(l: new_l, c: c, h: h, alpha: alpha)
 }
 
@@ -340,43 +336,19 @@ pub fn rotate_hue(color: Oklch, degrees: Float) -> Oklch {
 /// Set the alpha (opacity) channel.
 pub fn set_alpha(color: Oklch, alpha: Float) -> Oklch {
   let Oklch(l: l, c: c, h: h, alpha: _) = color
-  let alpha = case alpha <. 0.0 {
-    True -> 0.0
-    False ->
-      case alpha >. 1.0 {
-        True -> 1.0
-        False -> alpha
-      }
-  }
-  Oklch(l: l, c: c, h: h, alpha: alpha)
+  Oklch(l: l, c: c, h: h, alpha: float.clamp(alpha, 0.0, 1.0))
 }
 
 /// Set the lightness channel.
 pub fn set_l(color: Oklch, l: Float) -> Oklch {
   let Oklch(l: _, c: c, h: h, alpha: alpha) = color
-  let l = case l <. 0.0 {
-    True -> 0.0
-    False ->
-      case l >. 1.0 {
-        True -> 1.0
-        False -> l
-      }
-  }
-  Oklch(l: l, c: c, h: h, alpha: alpha)
+  Oklch(l: float.clamp(l, 0.0, 1.0), c: c, h: h, alpha: alpha)
 }
 
 /// Set the chroma (saturation) channel.
 pub fn set_c(color: Oklch, c: Float) -> Oklch {
   let Oklch(l: l, c: _, h: h, alpha: alpha) = color
-  let c = case c <. 0.0 {
-    True -> 0.0
-    False ->
-      case c >. 0.4 {
-        True -> 0.4
-        False -> c
-      }
-  }
-  Oklch(l: l, c: c, h: h, alpha: alpha)
+  Oklch(l: l, c: float.clamp(c, 0.0, 0.4), h: h, alpha: alpha)
 }
 
 /// Set the hue channel.
@@ -405,14 +377,7 @@ pub fn mix(color1: Oklch, color2: Oklch, weight: Float) -> Oklch {
   let Oklch(l: l1, c: c1, h: h1, alpha: a1) = color1
   let Oklch(l: l2, c: c2, h: h2, alpha: a2) = color2
 
-  let weight = case weight <. 0.0 {
-    True -> 0.0
-    False ->
-      case weight >. 1.0 {
-        True -> 1.0
-        False -> weight
-      }
-  }
+  let weight = float.clamp(weight, 0.0, 1.0)
 
   let w1 = 1.0 -. weight
   let w2 = weight
@@ -663,15 +628,7 @@ fn lerp_angle(a: Float, b: Float, t: Float) -> Float {
 }
 
 fn float_to_256(f: Float) -> Int {
-  let f = case f <. 0.0 {
-    True -> 0.0
-    False ->
-      case f >. 1.0 {
-        True -> 1.0
-        False -> f
-      }
-  }
-  f *. 255.0 |> float.round
+  float.clamp(f, 0.0, 1.0) *. 255.0 |> float.round
 }
 
 // =============================================================================
