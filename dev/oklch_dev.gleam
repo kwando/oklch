@@ -54,7 +54,9 @@ fn palette(
 
   let diff = 360.0 /. int.to_float(number_of_colors)
 
-  list.range(0, number_of_colors - 1)
-  |> list.map(fn(index) { oklch.rotate_hue(color, int.to_float(index) *. diff) })
+  int.range(0, number_of_colors - 1, [], fn(acc, index) {
+    [oklch.rotate_hue(color, int.to_float(index) *. diff), ..acc]
+  })
+  |> list.reverse
   |> Ok
 }
