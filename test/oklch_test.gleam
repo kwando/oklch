@@ -565,6 +565,14 @@ pub fn oklch_to_rgb_clamped_test() {
   assert a == 1.0
 }
 
+pub fn gamut_mapping_differs_from_simple_clamp_test() {
+  let color = oklch.oklch(0.5, 0.5, 180.0, 1.0)
+  let mapped = oklch.oklch_to_rgb(color)
+  let clamped = oklch.oklch_to_rgb_clamped(color)
+  // For out-of-gamut color, CSS gamut mapping should differ from simple clamping
+  assert mapped.r != clamped.r || mapped.g != clamped.g || mapped.b != clamped.b
+}
+
 pub fn gamut_mapping_preserves_hue_test() {
   // Verify that gamut mapping preserves hue approximately
   let color = oklch.oklch(0.5, 0.6, 120.0, 1.0)

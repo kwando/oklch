@@ -658,20 +658,12 @@ fn srgb_to_linear(c: Float) -> Float {
 }
 
 fn linear_to_srgb(c: Float) -> Float {
-  let c = case c <. 0.0 {
-    True -> 0.0
-    False -> c
-  }
   case c <. 0.0031308 {
     True -> c *. 12.92
     False -> {
       case float.power(c, 1.0 /. 2.4) {
         Ok(tmp) -> {
-          let c = tmp *. 1.055 -. 0.055
-          case c >. 1.0 {
-            True -> 1.0
-            False -> c
-          }
+          tmp *. 1.055 -. 0.055
         }
         Error(_) -> 0.0
       }
