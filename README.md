@@ -3,22 +3,178 @@
 [![Package Version](https://img.shields.io/hexpm/v/oklch)](https://hex.pm/packages/oklch)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/oklch/)
 
+A practical OKLCH color toolkit for Gleam.
+
+It includes:
+
+- OKLCH and RGB types
+- OKLCH <-> RGB conversion
+- CSS-style gamut mapping for out-of-gamut colors
+- Hex parsing/formatting (`#RGB`, `#RGBA`, `#RRGGBB`, `#RRGGBBAA`)
+- Color manipulation helpers (lighten, saturate, rotate hue, mix)
+- Palette helpers (complementary, triadic, analogous, split-complementary)
+- Perceptual distance (`deltaE OK`)
+- WCAG contrast checks
+- ANSI terminal color output
+- Integration with `gleam_community/colour`
+
+## What Is OKLCH?
+
+OKLCH is a perceptual color space based on OKLab, expressed as:
+
+- `L`: lightness (`0.0` to `1.0`)
+- `C`: chroma (color intensity, `>= 0.0`)
+- `H`: hue angle in degrees (`0` to `360`)
+
+Compared to RGB/HSL, OKLCH is usually easier to reason about when designing palettes:
+
+- equal lightness steps look more visually even,
+- hue rotation gives more predictable color relationships,
+- chroma control is more intuitive for vivid vs muted colors.
+
+In this library, `oklch_to_rgb/1` applies CSS-inspired gamut mapping so colors that cannot be displayed in sRGB are adjusted more gracefully than simple channel clipping.
+
+## Installation
+
 ```sh
 gleam add oklch@1
 ```
+
+## Quick Start
+
 ```gleam
 import oklch
 
-pub fn main() -> Nil {
-  // TODO: An example of the project in use
+pub fn main() {
+  let brand = oklch.oklch(0.62, 0.19, 250.0, 1.0)
+
+  // Convert to CSS and hex
+  let css = oklch.oklch_to_css(brand)
+  let hex = oklch.oklch_to_hex(brand)
+
+  // Generate a complementary color
+  let complement = oklch.complementary(brand)
+
+  // Mix 20% toward complement
+  let mixed = oklch.mix(brand, complement, 0.2)
+
+  // Guarantee sRGB-safe output for UI
+  let safe = oklch.gamut_map(mixed)
+
+  // Print values in terminal color
+  let preview = oklch.ansi_bg(safe, "  OKLCH  ")
+  preview
 }
 ```
 
-Further documentation can be found at <https://hexdocs.pm/oklch>.
+## Core API
+
+### Constructors
+
+- `oklch(l, c, h, alpha)`
+- `rgb(r, g, b, alpha)`
+- `rgb_from_ints(r, g, b, alpha)`
+
+All constructors normalize/clamp inputs to safe ranges.
+
+### Conversion
+
+- `oklch_to_rgb(color)`
+- `oklch_to_rgb_clamped(color)`
+- `rgb_to_oklch(color)`
+- `oklch_to_hex(color)`
+- `hex_to_oklch(hex)`
+- `rgb_to_hex(color)`
+- `hex_to_rgb(hex)`
+
+### Manipulation
+
+- `lighten`, `darken`
+- `saturate`, `desaturate`
+- `rotate_hue`
+- `set_l`, `set_c`, `set_h`, `set_alpha`
+- `mix`
+
+### Palette helpers
+
+- `complementary(color)`
+- `triadic(color) -> #(Oklch, Oklch)`
+- `analogous(color, angle) -> #(Oklch, Oklch)`
+- `split_complementary(color, angle) -> #(Oklch, Oklch)`
+
+### Gamut + distance
+
+- `in_gamut(color) -> Bool`
+- `gamut_map(color) -> Oklch`
+- `distance(color1, color2) -> Float`
+
+### Accessibility
+
+- `luminance(color)`
+- `contrast_ratio(color1, color2)`
+- `wcag_aa(ratio)`
+- `wcag_aaa(ratio)`
+- `wcag_aa_large_text(ratio)`
+- `wcag_aaa_large_text(ratio)`
+
+### ANSI output
+
+- `ansi(color, text)` (foreground)
+- `ansi_bg(color, text)` (background)
+- `ansi_fg_bg(fg, bg, text)`
+
+### `gleam_community/colour` interop
+
+- `from_colour(colour)`
+- `to_colour(oklch_color)`
+
+## Examples
+
+### Parse hex and rotate hue
+
+```gleam
+import oklch
+import gleam/result
+
+pub fn main() {
+  let assert Ok(rotated) =
+    oklch.hex_to_oklch("#3366FF")
+    |> result.map(oklch.rotate_hue(_, 45.0))
+
+  oklch.oklch_to_css(rotated)
+}
+```
+
+### Check contrast
+
+```gleam
+import oklch
+
+pub fn main() {
+  let text = oklch.oklch(0.15, 0.02, 250.0, 1.0)
+  let bg = oklch.oklch(0.96, 0.01, 250.0, 1.0)
+
+  let ratio = oklch.contrast_ratio(text, bg)
+  let passes = oklch.wcag_aa(ratio)
+
+  #(ratio, passes)
+}
+```
 
 ## Development
 
 ```sh
-gleam run   # Run the project
-gleam test  # Run the tests
+gleam test
+gleam run
 ```
+
+## Notes
+
+- Chroma (`c`) is lower-bounded at `0.0` and not hard-capped.
+- Hue wraps around the color wheel (`0..360`).
+- `oklch_to_rgb/1` is recommended for display output in sRGB contexts.
+
+## Documentation
+
+- Hex package: <https://hex.pm/packages/oklch>
+- API docs: <https://hexdocs.pm/oklch/>

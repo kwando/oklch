@@ -504,6 +504,73 @@ pub fn rgb_round_trip_reference_test() {
 }
 
 // =============================================================================
+// PALETTE HELPER TESTS
+// =============================================================================
+
+pub fn complementary_test() {
+  let color = oklch.oklch(0.5, 0.2, 350.0, 0.8)
+  let result = oklch.complementary(color)
+  let Oklch(l: l, c: c, h: h, alpha: alpha) = result
+  assert float.loosely_equals(l, with: 0.5, tolerating: 0.001)
+  assert float.loosely_equals(c, with: 0.2, tolerating: 0.001)
+  assert float.loosely_equals(h, with: 170.0, tolerating: 0.001)
+  assert float.loosely_equals(alpha, with: 0.8, tolerating: 0.001)
+}
+
+pub fn triadic_test() {
+  let color = oklch.oklch(0.6, 0.15, 10.0, 1.0)
+  let #(a, b) = oklch.triadic(color)
+  assert float.loosely_equals(a.h, with: 130.0, tolerating: 0.001)
+  assert float.loosely_equals(b.h, with: 250.0, tolerating: 0.001)
+}
+
+pub fn split_complementary_test() {
+  let color = oklch.oklch(0.5, 0.2, 20.0, 1.0)
+  let #(a, b) = oklch.split_complementary(color, 30.0)
+  assert float.loosely_equals(a.h, with: 170.0, tolerating: 0.001)
+  assert float.loosely_equals(b.h, with: 230.0, tolerating: 0.001)
+}
+
+pub fn analogous_test() {
+  let color = oklch.oklch(0.5, 0.2, 10.0, 1.0)
+  let #(a, b) = oklch.analogous(color, 30.0)
+  assert float.loosely_equals(a.h, with: 340.0, tolerating: 0.001)
+  assert float.loosely_equals(b.h, with: 40.0, tolerating: 0.001)
+}
+
+// =============================================================================
+// PUBLIC GAMUT + DISTANCE TESTS
+// =============================================================================
+
+pub fn in_gamut_test() {
+  let inside = oklch.oklch(0.5, 0.05, 180.0, 1.0)
+  let outside = oklch.oklch(0.5, 0.6, 180.0, 1.0)
+  assert oklch.in_gamut(inside)
+  assert !oklch.in_gamut(outside)
+}
+
+pub fn gamut_map_test() {
+  let outside = oklch.oklch(0.5, 0.6, 180.0, 0.7)
+  let mapped = oklch.gamut_map(outside)
+  assert oklch.in_gamut(mapped)
+  assert float.loosely_equals(mapped.alpha, with: 0.7, tolerating: 0.001)
+}
+
+pub fn distance_test() {
+  let a = oklch.oklch(0.5, 0.2, 120.0, 1.0)
+  let b = oklch.oklch(0.5, 0.2, 120.0, 1.0)
+  let c = oklch.oklch(0.6, 0.25, 200.0, 1.0)
+
+  let d_ab = oklch.distance(a, b)
+  let d_ac = oklch.distance(a, c)
+  let d_ca = oklch.distance(c, a)
+
+  assert float.loosely_equals(d_ab, with: 0.0, tolerating: 0.000001)
+  assert d_ac >. 0.0
+  assert float.loosely_equals(d_ac, with: d_ca, tolerating: 0.000001)
+}
+
+// =============================================================================
 // GAMUT MAPPING TESTS
 // =============================================================================
 

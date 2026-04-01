@@ -376,6 +376,32 @@ pub fn mix(color1: Oklch, color2: Oklch, weight: Float) -> Oklch {
   Oklch(l: l, c: c, h: h, alpha: alpha)
 }
 
+/// Get the complementary color (hue + 180deg).
+pub fn complementary(color: Oklch) -> Oklch {
+  rotate_hue(color, 180.0)
+}
+
+/// Get the two triadic colors (hue + 120deg and +240deg).
+pub fn triadic(color: Oklch) -> #(Oklch, Oklch) {
+  #(rotate_hue(color, 120.0), rotate_hue(color, 240.0))
+}
+
+/// Get split complementary colors around the complement.
+///
+/// For an angle of 30deg, this returns hues at +150deg and +210deg.
+pub fn split_complementary(color: Oklch, angle: Float) -> #(Oklch, Oklch) {
+  let angle = clamp_h(angle)
+  #(rotate_hue(color, 180.0 -. angle), rotate_hue(color, 180.0 +. angle))
+}
+
+/// Get analogous colors on both sides of the hue wheel.
+///
+/// For an angle of 30deg, this returns hues at -30deg and +30deg.
+pub fn analogous(color: Oklch, angle: Float) -> #(Oklch, Oklch) {
+  let angle = clamp_h(angle)
+  #(rotate_hue(color, 0.0 -. angle), rotate_hue(color, angle))
+}
+
 /// Get the relative luminance of a color.
 /// In OKLCH, lightness (L) directly corresponds to relative luminance.
 pub fn luminance(color: Oklch) -> Float {
@@ -389,6 +415,24 @@ pub fn luminance(color: Oklch) -> Float {
 pub fn has_hue(color: Oklch) -> Bool {
   let Oklch(c: c, ..) = color
   c >. 0.0
+}
+
+/// Check whether an OKLCH color is directly representable in sRGB gamut.
+pub fn in_gamut(color: Oklch) -> Bool {
+  is_in_gamut(color)
+}
+
+/// Map an OKLCH color into sRGB gamut and return it as OKLCH.
+pub fn gamut_map(color: Oklch) -> Oklch {
+  case is_in_gamut(color) {
+    True -> color
+    False -> oklch_to_rgb(color) |> rgb_to_oklch
+  }
+}
+
+/// Calculate perceptual distance (deltaE OK) between two colors.
+pub fn distance(color1: Oklch, color2: Oklch) -> Float {
+  delta_e_ok(color1, color2)
 }
 
 /// Serialize OKLCH color to CSS string format.
