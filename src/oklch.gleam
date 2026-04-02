@@ -1,3 +1,59 @@
+//// A practical OKLCH color toolkit for Gleam.
+////
+//// OKLCH is a perceptual color space based on OKLab, offering more intuitive
+//// color manipulation than RGB or HSL. Changes to lightness, chroma, and hue
+//// produce visually consistent results.
+////
+//// ## Quick Start
+////
+//// ```gleam
+//// import oklch
+////
+//// // Create a color
+//// let brand = oklch.oklch(0.62, 0.19, 250.0, 1.0)
+////
+//// // Convert to hex for CSS
+//// let hex = oklch.to_hex(brand)
+//// // -> "#3B82F6"
+////
+//// // Create a complementary color
+//// let complement = oklch.complementary(brand)
+////
+//// // Mix colors
+//// let mixed = oklch.mix(brand, complement, 0.5)
+////
+//// // Output CSS format
+//// let css = oklch.to_css(mixed)
+//// // -> "oklch(62% 0.19 220deg)"
+//// ```
+////
+//// ## Color Spaces
+////
+//// This module provides two main color types:
+////
+//// - `Oklch` - Lightness, Chroma, Hue, and Alpha. The primary type for manipulation
+//// - `Rgb` - Red, Green, Blue, and Alpha. Used for output and interop
+////
+//// ## Features
+////
+//// - **Type constructors**: `oklch()`, `rgb()`, `rgb_from_ints()`
+//// - **Conversion**: `to_rgb()`, `to_hex()`, `to_css()`, `rgb_to_oklch()`
+//// - **Manipulation**: `lighten()`, `darken()`, `saturate()`, `desaturate()`, `rotate_hue()`
+//// - **Blending**: `mix()` for linear interpolation between colors
+//// - **Palettes**: `complementary()`, `triadic()`, `analogous()`, `split_complementary()`
+//// - **Gamut mapping**: CSS-compliant gamut mapping for out-of-gamut colors
+//// - **Accessibility**: `contrast_ratio()`, `wcag_aa()`, `wcag_aaa()`
+//// - **Terminal output**: `ansi()`, `ansi_bg()`, `ansi_fg_bg()`
+//// - **Interop**: `from_colour()`, `to_colour()` for gleam_community/colour
+////
+//// ## Gamut Mapping
+////
+//// Colors with high chroma may fall outside the sRGB displayable range.
+//// The `to_rgb()` function applies CSS Color Module Level 4 gamut mapping,
+//// which preserves lightness and hue while reducing chroma to fit within sRGB.
+////
+//// For simple channel clamping (faster but less accurate), use `to_rgb_clamped()`.
+
 import gleam/float
 import gleam/int
 import gleam/string
