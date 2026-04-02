@@ -54,9 +54,9 @@
 ////
 //// For simple channel clamping (faster but less accurate), use `to_rgb_clamped()`.
 
+import gleam/bit_array
 import gleam/float
 import gleam/int
-import gleam/string
 import gleam_community/colour.{type Colour}
 
 // =============================================================================
@@ -251,16 +251,21 @@ pub fn to_hex(color: Oklch) -> String {
 pub fn rgb_to_hex(color: Rgb) -> String {
   let Rgb(r: r, g: g, b: b, alpha: alpha) = color
 
-  let r_hex = to_hex_2(float.round(r *. 255.0))
-  let g_hex = to_hex_2(float.round(g *. 255.0))
-  let b_hex = to_hex_2(float.round(b *. 255.0))
+  "#"
+  <> bit_array.base16_encode(case alpha <. 1.0 {
+    True -> <<
+      float_to_256(r),
+      float_to_256(g),
+      float_to_256(b),
+      float_to_256(alpha),
+    >>
 
-  let hex_string = r_hex <> g_hex <> b_hex
-
-  case alpha <. 1.0 {
-    True -> "#" <> hex_string <> to_hex_2(float.round(alpha *. 255.0))
-    False -> "#" <> hex_string
-  }
+    False -> <<
+      float_to_256(r),
+      float_to_256(g),
+      float_to_256(b),
+    >>
+  })
 }
 
 // =============================================================================
@@ -698,15 +703,8 @@ fn lerp_angle(a: Float, b: Float, t: Float) -> Float {
 }
 
 fn float_to_256(f: Float) -> Int {
-  float.clamp(f, 0.0, 1.0) *. 255.0 |> float.round
-}
-
-fn to_hex_2(value: Int) -> String {
-  let hex = int.clamp(value, 0, 255) |> int.to_base16 |> string.uppercase
-  case string.length(hex) == 1 {
-    True -> "0" <> hex
-    False -> hex
-  }
+  float.round(f *. 255.0)
+  |> int.clamp(0, 255)
 }
 
 fn cube_root(x: Float) -> Float {
