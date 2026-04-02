@@ -99,7 +99,7 @@ pub fn rgb_from_ints(r: Int, g: Int, b: Int, alpha: Float) -> Rgb {
 /// For colors outside the gamut, chroma is reduced until the color
 /// fits within sRGB or until the difference between the clipped and
 /// target color is below the Just Noticeable Difference (JND) threshold.
-pub fn oklch_to_rgb(color: Oklch) -> Rgb {
+pub fn to_rgb(color: Oklch) -> Rgb {
   // Handle edge cases first (white and black)
   let Oklch(l: l, c: _, h: _, alpha: alpha) = color
 
@@ -113,7 +113,7 @@ pub fn oklch_to_rgb(color: Oklch) -> Rgb {
         False -> {
           // Check if already in gamut
           case is_in_gamut(color) {
-            True -> oklch_to_rgb_clamped(color)
+            True -> to_rgb_clamped(color)
             False -> gamut_map_oklch_to_rgb(color)
           }
         }
@@ -128,8 +128,8 @@ pub fn oklch_to_rgb(color: Oklch) -> Rgb {
 /// to 0.0 and values > 1.0 to 1.0. This is faster but produces less
 /// perceptually accurate results than the gamut mapping algorithm.
 ///
-/// For CSS-compliant gamut mapping, use oklch_to_rgb/1 instead.
-pub fn oklch_to_rgb_clamped(color: Oklch) -> Rgb {
+/// For CSS-compliant gamut mapping, use to_rgb/1 instead.
+pub fn to_rgb_clamped(color: Oklch) -> Rgb {
   let Rgb(r: r, g: g, b: b, alpha: alpha) = oklch_to_rgb_raw(color)
   Rgb(
     r: float.clamp(r, 0.0, 1.0),
@@ -183,8 +183,8 @@ pub fn rgb_to_oklch(color: Rgb) -> Oklch {
 ///
 /// Output is `#RRGGBB` when alpha is 1.0, otherwise `#RRGGBBAA`.
 /// Channel bytes are rounded and uppercase.
-pub fn oklch_to_hex(color: Oklch) -> String {
-  let rgb = oklch_to_rgb(color)
+pub fn to_hex(color: Oklch) -> String {
+  let rgb = to_rgb(color)
   rgb_to_hex(rgb)
 }
 
@@ -356,11 +356,11 @@ pub fn in_gamut(color: Oklch) -> Bool {
 /// Map an OKLCH color into sRGB gamut and return it as OKLCH.
 ///
 /// In-gamut colors are returned unchanged. Out-of-gamut colors are converted
-/// through the CSS-style gamut mapping path used by `oklch_to_rgb/1`.
+/// through the CSS-style gamut mapping path used by `to_rgb/1`.
 pub fn gamut_map(color: Oklch) -> Oklch {
   case is_in_gamut(color) {
     True -> color
-    False -> oklch_to_rgb(color) |> rgb_to_oklch
+    False -> to_rgb(color) |> rgb_to_oklch
   }
 }
 
@@ -381,16 +381,16 @@ pub fn distance(color1: Oklch, color2: Oklch) -> Float {
 ///
 /// ## Examples
 /// ```gleam
-/// oklch_to_css(oklch(0.5, 0.2, 180.0, 1.0))
+/// to_css(oklch(0.5, 0.2, 180.0, 1.0))
 /// // -> "oklch(50% 0.2 180deg)"
 ///
-/// oklch_to_css(oklch(0.5, 0.0, 0.0, 1.0))
+/// to_css(oklch(0.5, 0.0, 0.0, 1.0))
 /// // -> "oklch(50% 0 none)"
 ///
-/// oklch_to_css(oklch(0.5, 0.2, 180.0, 0.5))
+/// to_css(oklch(0.5, 0.2, 180.0, 0.5))
 /// // -> "oklch(50% 0.2 180deg / 0.5)"
 /// ```
-pub fn oklch_to_css(color: Oklch) -> String {
+pub fn to_css(color: Oklch) -> String {
   let Oklch(l: l, c: c, h: h, alpha: alpha) = color
 
   // Format lightness as percentage
@@ -489,7 +489,7 @@ pub fn wcag_aaa_large_text(ratio: Float) -> Bool {
 
 /// Wrap text in ANSI escape codes to display it with the given foreground color.
 pub fn ansi(color: Oklch, text: String) -> String {
-  let rgb = oklch_to_rgb(color)
+  let rgb = to_rgb(color)
   let Rgb(r: r, g: g, b: b, alpha: _) = rgb
   let r = float_to_256(r)
   let g = float_to_256(g)
@@ -508,7 +508,7 @@ pub fn ansi(color: Oklch, text: String) -> String {
 
 /// Wrap text in ANSI escape codes to display it with the given background color.
 pub fn ansi_bg(color: Oklch, text: String) -> String {
-  let rgb = oklch_to_rgb(color)
+  let rgb = to_rgb(color)
   let Rgb(r: r, g: g, b: b, alpha: _) = rgb
   let r = float_to_256(r)
   let g = float_to_256(g)
@@ -527,10 +527,10 @@ pub fn ansi_bg(color: Oklch, text: String) -> String {
 
 /// Wrap text in ANSI escape codes to display it with both foreground and background colors.
 pub fn ansi_fg_bg(fg: Oklch, bg: Oklch, text: String) -> String {
-  let fg_rgb = oklch_to_rgb(fg)
+  let fg_rgb = to_rgb(fg)
   let Rgb(r: fg_r, g: fg_g, b: fg_b, alpha: _) = fg_rgb
 
-  let bg_rgb = oklch_to_rgb(bg)
+  let bg_rgb = to_rgb(bg)
   let Rgb(r: bg_r, g: bg_g, b: bg_b, alpha: _) = bg_rgb
 
   let fg_r = float_to_256(fg_r)
@@ -784,11 +784,11 @@ fn gamut_map_oklch_to_rgb(color: Oklch) -> Rgb {
 
   // If already within JND, return the clipped version
   case e <. jnd {
-    True -> oklch_to_rgb_clamped(clipped)
+    True -> to_rgb_clamped(clipped)
     False -> {
       // Binary search for optimal chroma
       let result = binary_search_chroma(0.0, original_c, l, h, alpha)
-      oklch_to_rgb_clamped(result)
+      to_rgb_clamped(result)
     }
   }
 }
@@ -862,6 +862,6 @@ pub fn from_colour(colour: Colour) -> Oklch {
 
 /// Convert OKLCH to a gleam_community_colour Colour.
 pub fn to_colour(oklch_color: Oklch) -> Result(Colour, Nil) {
-  let Rgb(r: r, g: g, b: b, alpha: alpha) = oklch_to_rgb(oklch_color)
+  let Rgb(r: r, g: g, b: b, alpha: alpha) = to_rgb(oklch_color)
   colour.from_rgba(r, g, b, alpha)
 }

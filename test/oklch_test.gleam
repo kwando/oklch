@@ -79,7 +79,7 @@ pub fn rgb_from_ints_test() {
 
 pub fn oklch_to_rgb_basic_test() {
   let color = oklch.oklch(0.5, 0.2, 180.0, 1.0)
-  let rgb = oklch.oklch_to_rgb(color)
+  let rgb = oklch.to_rgb(color)
   let Rgb(r: _, g: _, b: _, alpha: alpha) = rgb
   assert alpha == 1.0
 }
@@ -97,7 +97,7 @@ pub fn rgb_to_oklch_basic_test() {
 
 pub fn round_trip_oklch_rgb_test() {
   let original = oklch.oklch(0.5, 0.2, 180.0, 1.0)
-  let rgb = oklch.oklch_to_rgb(original)
+  let rgb = oklch.to_rgb(original)
   let result = oklch.rgb_to_oklch(rgb)
   let Oklch(l: _l, c: _c, h: _h, alpha: alpha) = result
 
@@ -106,7 +106,7 @@ pub fn round_trip_oklch_rgb_test() {
 
 pub fn oklch_to_hex_test() {
   let color = oklch.oklch(0.5, 0.2, 180.0, 1.0)
-  let hex = oklch.oklch_to_hex(color)
+  let hex = oklch.to_hex(color)
   assert string.length(hex) == 7
 }
 
@@ -373,64 +373,64 @@ pub fn has_hue_almost_zero_chroma_test() {
 
 pub fn oklch_to_css_basic_test() {
   let color = oklch.oklch(0.5, 0.2, 180.0, 1.0)
-  let css = oklch.oklch_to_css(color)
+  let css = oklch.to_css(color)
   assert css == "oklch(50% 0.2 180deg)"
 }
 
 pub fn oklch_to_css_high_chroma_test() {
   // Chroma can exceed 0.4 (no clamping)
   let color = oklch.oklch(0.5, 0.6, 180.0, 1.0)
-  let css = oklch.oklch_to_css(color)
+  let css = oklch.to_css(color)
   assert css == "oklch(50% 0.6 180deg)"
 }
 
 pub fn oklch_to_css_with_alpha_test() {
   let color = oklch.oklch(0.5, 0.2, 180.0, 0.5)
-  let css = oklch.oklch_to_css(color)
+  let css = oklch.to_css(color)
   assert css == "oklch(50% 0.2 180deg / 0.5)"
 }
 
 pub fn oklch_to_css_no_hue_test() {
   // Gray color has no hue, outputs "none"
   let color = oklch.oklch(0.5, 0.0, 0.0, 1.0)
-  let css = oklch.oklch_to_css(color)
+  let css = oklch.to_css(color)
   assert css == "oklch(50% 0 none)"
 }
 
 pub fn oklch_to_css_no_hue_with_alpha_test() {
   let color = oklch.oklch(0.5, 0.0, 0.0, 0.5)
-  let css = oklch.oklch_to_css(color)
+  let css = oklch.to_css(color)
   assert css == "oklch(50% 0 none / 0.5)"
 }
 
 pub fn oklch_to_css_white_test() {
   let color = oklch.oklch(1.0, 0.0, 0.0, 1.0)
-  let css = oklch.oklch_to_css(color)
+  let css = oklch.to_css(color)
   assert css == "oklch(100% 0 none)"
 }
 
 pub fn oklch_to_css_black_test() {
   let color = oklch.oklch(0.0, 0.0, 0.0, 1.0)
-  let css = oklch.oklch_to_css(color)
+  let css = oklch.to_css(color)
   assert css == "oklch(0% 0 none)"
 }
 
 pub fn oklch_to_css_precision_test() {
   // Test with values that require rounding
   let color = oklch.oklch(0.7534, 0.2567, 45.3, 1.0)
-  let css = oklch.oklch_to_css(color)
+  let css = oklch.to_css(color)
   assert css == "oklch(75% 0.26 45deg)"
 }
 
 pub fn oklch_to_css_leading_zero_chroma_test() {
   let color = oklch.oklch(0.5, 0.05, 180.0, 1.0)
-  let css = oklch.oklch_to_css(color)
+  let css = oklch.to_css(color)
   assert css == "oklch(50% 0.05 180deg)"
 }
 
 pub fn oklch_to_css_leading_zero_alpha_test() {
   let color = oklch.oklch(0.5, 0.2, 180.0, 0.05)
-  let css = oklch.oklch_to_css(color)
+  let css = oklch.to_css(color)
   assert css == "oklch(50% 0.2 180deg / 0.05)"
 }
 
@@ -474,7 +474,7 @@ pub fn rgb_to_oklch_blue_reference_test() {
 
 pub fn rgb_round_trip_reference_test() {
   let original = oklch.rgb(0.2, 0.4, 0.9, 1.0)
-  let converted = original |> oklch.rgb_to_oklch |> oklch.oklch_to_rgb
+  let converted = original |> oklch.rgb_to_oklch |> oklch.to_rgb
   assert float.loosely_equals(converted.r, with: 0.2, tolerating: 0.01)
   assert float.loosely_equals(converted.g, with: 0.4, tolerating: 0.01)
   assert float.loosely_equals(converted.b, with: 0.9, tolerating: 0.01)
@@ -554,7 +554,7 @@ pub fn distance_test() {
 pub fn oklch_to_rgb_in_gamut_test() {
   // Color already in gamut should return reasonable RGB values
   let color = oklch.oklch(0.5, 0.2, 180.0, 1.0)
-  let rgb = oklch.oklch_to_rgb(color)
+  let rgb = oklch.to_rgb(color)
   // Verify RGB values are in valid range
   let Rgb(r, g, b, a) = rgb
   assert r >=. 0.0 && r <=. 1.0
@@ -566,7 +566,7 @@ pub fn oklch_to_rgb_in_gamut_test() {
 pub fn oklch_to_rgb_out_of_gamut_test() {
   // High chroma color that exceeds sRGB should be gamut mapped
   let color = oklch.oklch(0.5, 0.5, 180.0, 1.0)
-  let rgb = oklch.oklch_to_rgb(color)
+  let rgb = oklch.to_rgb(color)
   // All RGB components should be in valid range
   let Rgb(r, g, b, a) = rgb
   assert r >=. 0.0 && r <=. 1.0
@@ -578,7 +578,7 @@ pub fn oklch_to_rgb_out_of_gamut_test() {
 pub fn oklch_to_rgb_white_test() {
   // Lightness >= 100% should return white
   let color = oklch.oklch(1.0, 0.5, 180.0, 1.0)
-  let rgb = oklch.oklch_to_rgb(color)
+  let rgb = oklch.to_rgb(color)
   let Rgb(r, g, b, a) = rgb
   assert r == 1.0
   assert g == 1.0
@@ -589,7 +589,7 @@ pub fn oklch_to_rgb_white_test() {
 pub fn oklch_to_rgb_black_test() {
   // Lightness <= 0% should return black
   let color = oklch.oklch(0.0, 0.5, 180.0, 1.0)
-  let rgb = oklch.oklch_to_rgb(color)
+  let rgb = oklch.to_rgb(color)
   let Rgb(r, g, b, a) = rgb
   assert r == 0.0
   assert g == 0.0
@@ -600,7 +600,7 @@ pub fn oklch_to_rgb_black_test() {
 pub fn oklch_to_rgb_clamped_test() {
   // Old behavior: simple clamp should work
   let color = oklch.oklch(0.5, 0.5, 180.0, 1.0)
-  let rgb = oklch.oklch_to_rgb_clamped(color)
+  let rgb = oklch.to_rgb_clamped(color)
   // Just verify it works and returns valid RGB
   let Rgb(r, g, b, a) = rgb
   assert r >=. 0.0 && r <=. 1.0
@@ -611,8 +611,8 @@ pub fn oklch_to_rgb_clamped_test() {
 
 pub fn gamut_mapping_differs_from_simple_clamp_test() {
   let color = oklch.oklch(0.5, 0.5, 180.0, 1.0)
-  let mapped = oklch.oklch_to_rgb(color)
-  let clamped = oklch.oklch_to_rgb_clamped(color)
+  let mapped = oklch.to_rgb(color)
+  let clamped = oklch.to_rgb_clamped(color)
   // For out-of-gamut color, CSS gamut mapping should differ from simple clamping
   assert mapped.r != clamped.r || mapped.g != clamped.g || mapped.b != clamped.b
 }
@@ -620,7 +620,7 @@ pub fn gamut_mapping_differs_from_simple_clamp_test() {
 pub fn gamut_mapping_preserves_hue_test() {
   // Verify that gamut mapping preserves hue approximately
   let color = oklch.oklch(0.5, 0.6, 120.0, 1.0)
-  let rgb = oklch.oklch_to_rgb(color)
+  let rgb = oklch.to_rgb(color)
   let back_to_oklch = oklch.rgb_to_oklch(rgb)
   // Hue should be approximately preserved (within 30 degrees tolerance)
   assert float.loosely_equals(back_to_oklch.h, with: 120.0, tolerating: 30.0)
@@ -629,7 +629,7 @@ pub fn gamut_mapping_preserves_hue_test() {
 pub fn gamut_mapping_preserves_lightness_test() {
   // Verify that gamut mapping preserves lightness
   let color = oklch.oklch(0.7, 0.5, 180.0, 1.0)
-  let rgb = oklch.oklch_to_rgb(color)
+  let rgb = oklch.to_rgb(color)
   let back_to_oklch = oklch.rgb_to_oklch(rgb)
   // Lightness should be approximately preserved
   assert float.loosely_equals(back_to_oklch.l, with: 0.7, tolerating: 0.15)
@@ -638,7 +638,7 @@ pub fn gamut_mapping_preserves_lightness_test() {
 pub fn gamut_mapping_with_alpha_test() {
   // Gamut mapping should preserve alpha
   let color = oklch.oklch(0.5, 0.6, 180.0, 0.5)
-  let rgb = oklch.oklch_to_rgb(color)
+  let rgb = oklch.to_rgb(color)
   let Rgb(r: _, g: _, b: _, alpha: a) = rgb
   assert a == 0.5
 }

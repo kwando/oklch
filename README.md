@@ -32,7 +32,7 @@ Compared to RGB/HSL, OKLCH is usually easier to reason about when designing pale
 - hue rotation gives more predictable color relationships,
 - chroma control is more intuitive for vivid vs muted colors.
 
-In this library, `oklch_to_rgb/1` applies CSS-inspired gamut mapping so colors that cannot be displayed in sRGB are adjusted more gracefully than simple channel clipping.
+In this library, `to_rgb/1` applies CSS-inspired gamut mapping so colors that cannot be displayed in sRGB are adjusted more gracefully than simple channel clipping.
 
 ## Installation
 
@@ -49,8 +49,8 @@ pub fn main() {
   let brand = oklch.oklch(0.62, 0.19, 250.0, 1.0)
 
   // Convert to CSS and hex
-  let css = oklch.oklch_to_css(brand)
-  let hex = oklch.oklch_to_hex(brand)
+  let css = oklch.to_css(brand)
+  let hex = oklch.to_hex(brand)
 
   // Generate a complementary color
   let complement = oklch.complementary(brand)
@@ -79,10 +79,10 @@ All constructors normalize/clamp inputs to safe ranges.
 
 ### Conversion
 
-- `oklch_to_rgb(color)`
-- `oklch_to_rgb_clamped(color)`
+- `to_rgb(color)`
+- `to_rgb_clamped(color)`
 - `rgb_to_oklch(color)`
-- `oklch_to_hex(color)`
+- `to_hex(color)`
 - `rgb_to_hex(color)`
 
 ### Manipulation
@@ -141,7 +141,7 @@ pub fn main() {
     |> result.map(oklch.from_colour)
     |> result.map(oklch.rotate_hue(_, 45.0))
 
-  oklch.oklch_to_css(rotated)
+  oklch.to_css(rotated)
 }
 ```
 
@@ -172,7 +172,7 @@ gleam run
 
 - Chroma (`c`) is lower-bounded at `0.0` and not hard-capped.
 - Hue wraps around the color wheel (`0..360`).
-- `oklch_to_rgb/1` is recommended for display output in sRGB contexts.
+- `to_rgb/1` is recommended for display output in sRGB contexts.
 
 ## Documentation
 
