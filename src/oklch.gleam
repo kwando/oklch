@@ -145,7 +145,7 @@ pub fn rgb_from_ints(r: Int, g: Int, b: Int, alpha: Float) -> Rgb {
 ///
 /// Uses the CSS Color Module Level 4 gamut mapping algorithm:
 /// "Binary Search Gamut Mapping with Local MINDE"
-/// https://www.w3.org/TR/css-color-4/#gamut-mapping
+/// [https://www.w3.org/TR/css-color-4/#gamut-mapping](https://www.w3.org/TR/css-color-4/#gamut-mapping)
 ///
 /// This algorithm preserves lightness and hue while reducing chroma
 /// to bring out-of-gamut colors into the sRGB gamut. The result is
