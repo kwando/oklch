@@ -140,7 +140,7 @@ pub fn oklch_to_rgb_clamped(color: Oklch) -> Rgb {
 }
 
 /// Convert RGB color to OKLCH.
-/// 
+///
 /// Uses the OKLAB color space as an intermediate step:
 /// sRGB -> Linear RGB -> OKLAB -> OKLCH
 pub fn rgb_to_oklch(color: Rgb) -> Oklch {
@@ -372,21 +372,21 @@ pub fn distance(color1: Oklch, color2: Oklch) -> Float {
 }
 
 /// Serialize OKLCH color to CSS string format.
-/// 
+///
 /// Output format: "oklch(50% 0.2 180deg)" or "oklch(50% 0.2 180deg / 0.5)"
 /// - Lightness is shown as percentage (0% - 100%)
 /// - Chroma is shown as a number (no unit, can exceed 0.4)
 /// - Hue is shown as degrees or "none" when chroma is 0
 /// - Alpha is only shown when less than 1.0
-/// 
+///
 /// ## Examples
 /// ```gleam
 /// oklch_to_css(oklch(0.5, 0.2, 180.0, 1.0))
 /// // -> "oklch(50% 0.2 180deg)"
-/// 
+///
 /// oklch_to_css(oklch(0.5, 0.0, 0.0, 1.0))
 /// // -> "oklch(50% 0 none)"
-/// 
+///
 /// oklch_to_css(oklch(0.5, 0.2, 180.0, 0.5))
 /// // -> "oklch(50% 0.2 180deg / 0.5)"
 /// ```
@@ -778,11 +778,6 @@ fn delta_e_ok(color1: Oklch, color2: Oklch) -> Float {
 fn gamut_map_oklch_to_rgb(color: Oklch) -> Rgb {
   let Oklch(l: l, c: original_c, h: h, alpha: alpha) = color
 
-  // Initialize binary search bounds
-  let min_chroma = 0.0
-  let max_chroma = original_c
-  let min_in_gamut = True
-
   // Get the clipped version of the original color
   let clipped = clip_to_gamut(color)
   let e = delta_e_ok(clipped, color)
@@ -792,129 +787,48 @@ fn gamut_map_oklch_to_rgb(color: Oklch) -> Rgb {
     True -> oklch_to_rgb_clamped(clipped)
     False -> {
       // Binary search for optimal chroma
-      let result =
-        binary_search_chroma(
-          color,
-          min_chroma,
-          max_chroma,
-          min_in_gamut,
-          l,
-          h,
-          alpha,
-        )
+      let result = binary_search_chroma(0.0, original_c, l, h, alpha)
       oklch_to_rgb_clamped(result)
     }
   }
 }
 
 fn binary_search_chroma(
-  original: Oklch,
   min_chroma: Float,
   max_chroma: Float,
-  min_in_gamut: Bool,
   l: Float,
   h: Float,
   alpha: Float,
 ) -> Oklch {
   // Check if we've reached the desired precision
   case max_chroma -. min_chroma <=. epsilon {
-    True -> {
-      let Oklch(h: h, alpha: alpha, ..) = original
-      clip_to_gamut(Oklch(l: l, c: min_chroma, h: h, alpha: alpha))
-    }
+    True -> clip_to_gamut(Oklch(l: l, c: min_chroma, h: h, alpha: alpha))
     False -> {
       let chroma = { min_chroma +. max_chroma } /. 2.0
       let current = Oklch(l: l, c: chroma, h: h, alpha: alpha)
+      let #(in_gamut, clipped, _, acceptable, close_enough) =
+        evaluate_candidate(current)
 
-      case min_in_gamut {
-        True -> {
-          // Check if current is in gamut
-          case is_in_gamut(current) {
-            True -> {
-              // Still in gamut, can increase chroma
-              binary_search_chroma(
-                original,
-                chroma,
-                max_chroma,
-                True,
-                l,
-                h,
-                alpha,
-              )
-            }
-            False -> {
-              // Out of gamut, need to reduce
-              let clipped = clip_to_gamut(current)
-              let e = delta_e_ok(clipped, current)
-
-              case e <. jnd {
-                True -> {
-                  case jnd -. e <=. epsilon {
-                    True -> clipped
-                    False ->
-                      binary_search_chroma(
-                        original,
-                        chroma,
-                        max_chroma,
-                        False,
-                        l,
-                        h,
-                        alpha,
-                      )
-                  }
-                }
-                False -> {
-                  // E >= JND, reduce max
-                  binary_search_chroma(
-                    original,
-                    min_chroma,
-                    chroma,
-                    min_in_gamut,
-                    l,
-                    h,
-                    alpha,
-                  )
-                }
-              }
-            }
-          }
-        }
-        False -> {
-          // min_in_gamut is false, always do local MINDE check
-          let clipped = clip_to_gamut(current)
-          let e = delta_e_ok(clipped, current)
-
-          case e <. jnd {
-            True -> {
-              case jnd -. e <=. epsilon {
-                True -> clipped
-                False ->
-                  binary_search_chroma(
-                    original,
-                    chroma,
-                    max_chroma,
-                    False,
-                    l,
-                    h,
-                    alpha,
-                  )
-              }
-            }
-            False -> {
-              // E >= JND, reduce max
-              binary_search_chroma(
-                original,
-                min_chroma,
-                chroma,
-                min_in_gamut,
-                l,
-                h,
-                alpha,
-              )
-            }
-          }
-        }
+      case in_gamut, acceptable, close_enough {
+        True, _, _ -> binary_search_chroma(chroma, max_chroma, l, h, alpha)
+        False, True, True -> clipped
+        False, True, False ->
+          binary_search_chroma(chroma, max_chroma, l, h, alpha)
+        False, False, _ -> binary_search_chroma(min_chroma, chroma, l, h, alpha)
       }
+    }
+  }
+}
+
+fn evaluate_candidate(candidate: Oklch) -> #(Bool, Oklch, Float, Bool, Bool) {
+  case is_in_gamut(candidate) {
+    True -> #(True, candidate, 0.0, False, False)
+    False -> {
+      let clipped = clip_to_gamut(candidate)
+      let e = delta_e_ok(clipped, candidate)
+      let acceptable = e <. jnd
+      let close_enough = acceptable && jnd -. e <=. epsilon
+      #(False, clipped, e, acceptable, close_enough)
     }
   }
 }
