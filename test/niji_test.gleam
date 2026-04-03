@@ -932,10 +932,587 @@ pub fn invert_full_with_white_test() {
 pub fn invert_full_with_black_test() {
   let black = niji.oklch(0.0, 0.0, 0.0, 1.0)
   let inverted = niji.invert_full(black)
-  let Oklch(l: l, c: c, h: _h, alpha: alpha) = inverted
+  let Oklch(l: l, c: c, h: __h, alpha: alpha) = inverted
 
   // Black with 0 chroma -> inverted lightness should be 1.0
   assert l == 1.0
   assert c == 0.0
   assert alpha == 1.0
+}
+
+// =============================================================================
+// NAMED CSS COLORS (from CSS Color Module Level 4 spec)
+// =============================================================================
+
+pub fn css_color_white_test() {
+  // white = #FFFFFF
+  let color = niji.rgb_from_ints(255, 255, 255, 1.0)
+  let oklch = niji.rgb_to_oklch(color)
+  assert float.loosely_equals(oklch.l, with: 1.0, tolerating: 0.01)
+  assert oklch.c <. 0.05
+}
+
+pub fn css_color_black_test() {
+  // black = #000000
+  let color = niji.rgb_from_ints(0, 0, 0, 1.0)
+  let oklch = niji.rgb_to_oklch(color)
+  assert float.loosely_equals(oklch.l, with: 0.0, tolerating: 0.01)
+  assert oklch.c <. 0.05
+}
+
+pub fn css_color_red_test() {
+  // red = #FF0000
+  let color = niji.rgb_from_ints(255, 0, 0, 1.0)
+  let oklch = niji.rgb_to_oklch(color)
+  assert float.loosely_equals(oklch.l, with: 0.628, tolerating: 0.01)
+  assert float.loosely_equals(oklch.c, with: 0.258, tolerating: 0.01)
+  assert float.loosely_equals(oklch.h, with: 29.2, tolerating: 1.0)
+}
+
+pub fn css_color_lime_test() {
+  // lime = #00FF00 (pure green)
+  let color = niji.rgb_from_ints(0, 255, 0, 1.0)
+  let oklch = niji.rgb_to_oklch(color)
+  assert float.loosely_equals(oklch.l, with: 0.866, tolerating: 0.01)
+  assert float.loosely_equals(oklch.c, with: 0.295, tolerating: 0.01)
+  assert float.loosely_equals(oklch.h, with: 142.5, tolerating: 1.0)
+}
+
+pub fn css_color_blue_test() {
+  // blue = #0000FF
+  let color = niji.rgb_from_ints(0, 0, 255, 1.0)
+  let oklch = niji.rgb_to_oklch(color)
+  assert float.loosely_equals(oklch.l, with: 0.452, tolerating: 0.01)
+  assert float.loosely_equals(oklch.c, with: 0.313, tolerating: 0.01)
+  assert float.loosely_equals(oklch.h, with: 264.1, tolerating: 1.0)
+}
+
+pub fn css_color_yellow_test() {
+  // yellow = #FFFF00
+  let color = niji.rgb_from_ints(255, 255, 0, 1.0)
+  let oklch = niji.rgb_to_oklch(color)
+  assert float.loosely_equals(oklch.l, with: 0.968, tolerating: 0.01)
+  assert float.loosely_equals(oklch.c, with: 0.211, tolerating: 0.01)
+  assert float.loosely_equals(oklch.h, with: 109.8, tolerating: 1.0)
+}
+
+pub fn css_color_cyan_test() {
+  // cyan/aqua = #00FFFF
+  let color = niji.rgb_from_ints(0, 255, 255, 1.0)
+  let oklch = niji.rgb_to_oklch(color)
+  assert float.loosely_equals(oklch.l, with: 0.905, tolerating: 0.01)
+  assert float.loosely_equals(oklch.c, with: 0.155, tolerating: 0.01)
+  assert float.loosely_equals(oklch.h, with: 194.7, tolerating: 1.0)
+}
+
+pub fn css_color_magenta_test() {
+  // magenta/fuchsia = #FF00FF
+  let color = niji.rgb_from_ints(255, 0, 255, 1.0)
+  let oklch = niji.rgb_to_oklch(color)
+  assert float.loosely_equals(oklch.l, with: 0.702, tolerating: 0.01)
+  assert float.loosely_equals(oklch.c, with: 0.322, tolerating: 0.01)
+  assert float.loosely_equals(oklch.h, with: 328.4, tolerating: 1.0)
+}
+
+pub fn css_color_silver_test() {
+  // silver = #C0C0C0
+  let color = niji.rgb_from_ints(192, 192, 192, 1.0)
+  let oklch = niji.rgb_to_oklch(color)
+  assert float.loosely_equals(oklch.l, with: 0.808, tolerating: 0.01)
+  assert oklch.c <. 0.02
+}
+
+pub fn css_color_gray_test() {
+  // gray = #808080
+  let color = niji.rgb_from_ints(128, 128, 128, 1.0)
+  let oklch = niji.rgb_to_oklch(color)
+  assert float.loosely_equals(oklch.l, with: 0.598, tolerating: 0.01)
+  assert oklch.c <. 0.02
+}
+
+pub fn css_color_maroon_test() {
+  // maroon = #800000
+  let color = niji.rgb_from_ints(128, 0, 0, 1.0)
+  let oklch = niji.rgb_to_oklch(color)
+  assert float.loosely_equals(oklch.l, with: 0.373, tolerating: 0.01)
+  assert float.loosely_equals(oklch.h, with: 28.0, tolerating: 2.0)
+}
+
+pub fn css_color_navy_test() {
+  // navy = #000080
+  let color = niji.rgb_from_ints(0, 0, 128, 1.0)
+  let oklch = niji.rgb_to_oklch(color)
+  assert float.loosely_equals(oklch.l, with: 0.277, tolerating: 0.01)
+  assert float.loosely_equals(oklch.h, with: 264.0, tolerating: 2.0)
+}
+
+pub fn css_color_teal_test() {
+  // teal = #008080
+  let color = niji.rgb_from_ints(0, 128, 128, 1.0)
+  let oklch = niji.rgb_to_oklch(color)
+  assert float.loosely_equals(oklch.l, with: 0.543, tolerating: 0.01)
+  assert float.loosely_equals(oklch.h, with: 194.0, tolerating: 2.0)
+}
+
+pub fn css_color_orange_test() {
+  // orange = #FFA500
+  let color = niji.rgb_from_ints(255, 165, 0, 1.0)
+  let oklch = niji.rgb_to_oklch(color)
+  assert float.loosely_equals(oklch.l, with: 0.792, tolerating: 0.01)
+  assert float.loosely_equals(oklch.h, with: 71.0, tolerating: 2.0)
+}
+
+pub fn css_color_purple_test() {
+  // purple = #800080
+  let color = niji.rgb_from_ints(128, 0, 128, 1.0)
+  let oklch = niji.rgb_to_oklch(color)
+  assert float.loosely_equals(oklch.l, with: 0.421, tolerating: 0.01)
+  assert float.loosely_equals(oklch.h, with: 328.0, tolerating: 2.0)
+}
+
+// =============================================================================
+// NAMED COLOR ROUNDTRIP TESTS
+// =============================================================================
+
+pub fn named_color_roundtrip_white_test() {
+  let hex = "#FFFFFF"
+  let color = niji.rgb_from_ints(255, 255, 255, 1.0)
+  let oklch = niji.rgb_to_oklch(color)
+  let rgb = niji.to_rgb(oklch)
+  let result_hex = niji.rgb_to_hex(rgb)
+  assert result_hex == hex
+}
+
+pub fn named_color_roundtrip_black_test() {
+  let hex = "#000000"
+  let color = niji.rgb_from_ints(0, 0, 0, 1.0)
+  let oklch = niji.rgb_to_oklch(color)
+  let rgb = niji.to_rgb(oklch)
+  let result_hex = niji.rgb_to_hex(rgb)
+  assert result_hex == hex
+}
+
+pub fn named_color_roundtrip_red_test() {
+  let hex = "#FF0000"
+  let color = niji.rgb_from_ints(255, 0, 0, 1.0)
+  let oklch = niji.rgb_to_oklch(color)
+  let rgb = niji.to_rgb(oklch)
+  let result_hex = niji.rgb_to_hex(rgb)
+  assert result_hex == hex
+}
+
+pub fn named_color_roundtrip_green_test() {
+  let hex = "#00FF00"
+  let color = niji.rgb_from_ints(0, 255, 0, 1.0)
+  let oklch = niji.rgb_to_oklch(color)
+  let rgb = niji.to_rgb(oklch)
+  let result_hex = niji.rgb_to_hex(rgb)
+  assert result_hex == hex
+}
+
+pub fn named_color_roundtrip_blue_test() {
+  let hex = "#0000FF"
+  let color = niji.rgb_from_ints(0, 0, 255, 1.0)
+  let oklch = niji.rgb_to_oklch(color)
+  let rgb = niji.to_rgb(oklch)
+  let result_hex = niji.rgb_to_hex(rgb)
+  assert result_hex == hex
+}
+
+// =============================================================================
+// EDGE CASES - ROTATE HUE NEGATIVE
+// =============================================================================
+
+pub fn rotate_hue_negative_90_test() {
+  let color = niji.oklch(0.5, 0.2, 90.0, 1.0)
+  let rotated = niji.rotate_hue(color, -90.0)
+  let Oklch(h: h, ..) = rotated
+  assert float.loosely_equals(h, with: 0.0, tolerating: 0.001)
+}
+
+pub fn rotate_hue_negative_180_test() {
+  let color = niji.oklch(0.5, 0.2, 180.0, 1.0)
+  let rotated = niji.rotate_hue(color, -180.0)
+  let Oklch(h: h, ..) = rotated
+  assert float.loosely_equals(h, with: 0.0, tolerating: 0.001)
+}
+
+pub fn rotate_hue_negative_wrap_test() {
+  let color = niji.oklch(0.5, 0.2, 30.0, 1.0)
+  let rotated = niji.rotate_hue(color, -60.0)
+  let Oklch(h: h, ..) = rotated
+  assert float.loosely_equals(h, with: 330.0, tolerating: 0.001)
+}
+
+// =============================================================================
+// MIX EDGE CASES
+// =============================================================================
+
+pub fn mix_same_color_test() {
+  let color = niji.oklch(0.5, 0.2, 180.0, 1.0)
+  let mixed = niji.mix(color, color, 0.5)
+  let Oklch(l: l, c: c, h: h, alpha: alpha) = mixed
+  assert float.loosely_equals(l, with: 0.5, tolerating: 0.001)
+  assert float.loosely_equals(c, with: 0.2, tolerating: 0.001)
+  assert float.loosely_equals(h, with: 180.0, tolerating: 0.001)
+  assert float.loosely_equals(alpha, with: 1.0, tolerating: 0.001)
+}
+
+pub fn mix_achromatic_with_chromatic_test() {
+  let gray = niji.oklch(0.5, 0.0, 0.0, 1.0)
+  let red = niji.oklch(0.5, 0.3, 0.0, 1.0)
+  let mixed = niji.mix(gray, red, 0.5)
+  let Oklch(l: l, c: c, h: h, alpha: alpha) = mixed
+  assert float.loosely_equals(l, with: 0.5, tolerating: 0.001)
+  assert float.loosely_equals(c, with: 0.15, tolerating: 0.001)
+  assert float.loosely_equals(h, with: 0.0, tolerating: 0.001)
+  assert float.loosely_equals(alpha, with: 1.0, tolerating: 0.001)
+}
+
+pub fn mix_weight_clamped_below_zero_test() {
+  let color1 = niji.oklch(0.3, 0.2, 0.0, 1.0)
+  let color2 = niji.oklch(0.7, 0.3, 180.0, 1.0)
+  let mixed = niji.mix(color1, color2, -0.5)
+  // Weight clamped to 0.0, should return color1
+  let Oklch(l: l, ..) = mixed
+  assert float.loosely_equals(l, with: 0.3, tolerating: 0.001)
+}
+
+pub fn mix_weight_clamped_above_one_test() {
+  let color1 = niji.oklch(0.3, 0.2, 0.0, 1.0)
+  let color2 = niji.oklch(0.7, 0.3, 180.0, 1.0)
+  let mixed = niji.mix(color1, color2, 1.5)
+  // Weight clamped to 1.0, should return color2
+  let Oklch(l: l, ..) = mixed
+  assert float.loosely_equals(l, with: 0.7, tolerating: 0.001)
+}
+
+pub fn mix_hue_wraparound_shortest_path_test() {
+  // Test that hue interpolation takes the shortest path
+  let color1 = niji.oklch(0.5, 0.2, 10.0, 1.0)
+  let color2 = niji.oklch(0.5, 0.2, 350.0, 1.0)
+  let mixed = niji.mix(color1, color2, 0.5)
+  let Oklch(h: h, ..) = mixed
+  // Should go through 0/360 boundary, result should be near 0 or 360
+  assert h >. 355.0 || h <. 5.0
+}
+
+// =============================================================================
+// DISTANCE EDGE CASES
+// =============================================================================
+
+pub fn distance_same_color_is_zero_test() {
+  let color = niji.oklch(0.5, 0.2, 180.0, 1.0)
+  let d = niji.distance(color, color)
+  assert d == 0.0
+}
+
+pub fn distance_maximum_difference_test() {
+  let black = niji.oklch(0.0, 0.0, 0.0, 1.0)
+  let white = niji.oklch(1.0, 0.0, 0.0, 1.0)
+  let d = niji.distance(black, white)
+  // Maximum lightness difference should give distance of 1.0
+  assert float.loosely_equals(d, with: 1.0, tolerating: 0.001)
+}
+
+pub fn distance_symmetry_test() {
+  let color1 = niji.oklch(0.3, 0.25, 120.0, 1.0)
+  let color2 = niji.oklch(0.7, 0.15, 240.0, 0.8)
+  let d1 = niji.distance(color1, color2)
+  let d2 = niji.distance(color2, color1)
+  assert float.loosely_equals(d1, with: d2, tolerating: 0.000001)
+}
+
+// =============================================================================
+// GAMUT BOUNDARY TESTS
+// =============================================================================
+
+pub fn gamut_boundary_white_test() {
+  let white = niji.oklch(1.0, 0.0, 0.0, 1.0)
+  assert niji.in_gamut(white)
+  let rgb = niji.to_rgb(white)
+  assert rgb.r == 1.0
+  assert rgb.g == 1.0
+  assert rgb.b == 1.0
+}
+
+pub fn gamut_boundary_black_test() {
+  let black = niji.oklch(0.0, 0.0, 0.0, 1.0)
+  assert niji.in_gamut(black)
+  let rgb = niji.to_rgb(black)
+  assert rgb.r == 0.0
+  assert rgb.g == 0.0
+  assert rgb.b == 0.0
+}
+
+pub fn gamut_boundary_mid_gray_test() {
+  let gray = niji.oklch(0.5, 0.0, 0.0, 1.0)
+  assert niji.in_gamut(gray)
+  let rgb = niji.to_rgb(gray)
+  // Middle gray in OKLCH is not exactly 0.5 in RGB due to gamma
+  // L=0.5 in OKLCH corresponds to approximately RGB 0.35-0.40 due to perceptual uniformity
+  assert rgb.r >. 0.3 && rgb.r <. 0.7
+  assert rgb.g >. 0.3 && rgb.g <. 0.7
+  assert rgb.b >. 0.3 && rgb.b <. 0.7
+}
+
+pub fn gamut_extreme_high_chroma_test() {
+  // Very high chroma that's definitely out of gamut
+  let extreme = niji.oklch(0.5, 2.0, 180.0, 1.0)
+  assert !niji.in_gamut(extreme)
+  let mapped = niji.gamut_map(extreme)
+  assert niji.in_gamut(mapped)
+}
+
+pub fn gamut_extreme_low_lightness_high_chroma_test() {
+  // Dark color with high chroma
+  let dark = niji.oklch(0.1, 0.5, 30.0, 1.0)
+  let rgb = niji.to_rgb(dark)
+  // Should still be valid RGB
+  assert rgb.r >=. 0.0 && rgb.r <=. 1.0
+  assert rgb.g >=. 0.0 && rgb.g <=. 1.0
+  assert rgb.b >=. 0.0 && rgb.b <=. 1.0
+}
+
+pub fn gamut_extreme_high_lightness_high_chroma_test() {
+  // Light color with high chroma
+  let light = niji.oklch(0.95, 0.3, 200.0, 1.0)
+  let rgb = niji.to_rgb(light)
+  // Should still be valid RGB
+  assert rgb.r >=. 0.0 && rgb.r <=. 1.0
+  assert rgb.g >=. 0.0 && rgb.g <=. 1.0
+  assert rgb.b >=. 0.0 && rgb.b <=. 1.0
+}
+
+// =============================================================================
+// STEPS EDGE CASES
+// =============================================================================
+
+pub fn steps_last_color_matches_to_test() {
+  let from = niji.oklch(0.3, 0.2, 0.0, 1.0)
+  let to = niji.oklch(0.7, 0.2, 180.0, 1.0)
+  let scale = niji.steps(from, to, 5)
+
+  let assert [_, _, _, _, last] = scale
+  // Last color should approximately match 'to'
+  assert float.loosely_equals(last.l, with: 0.7, tolerating: 0.01)
+  assert float.loosely_equals(last.h, with: 180.0, tolerating: 0.5)
+}
+
+pub fn steps_negative_count_test() {
+  let from = niji.oklch(0.3, 0.2, 0.0, 1.0)
+  let to = niji.oklch(0.7, 0.2, 180.0, 1.0)
+  let scale = niji.steps(from, to, -5)
+  assert list.is_empty(scale)
+}
+
+pub fn steps_identical_colors_test() {
+  let color = niji.oklch(0.5, 0.2, 180.0, 1.0)
+  let scale = niji.steps(color, color, 3)
+
+  let assert [c1, c2, c3] = scale
+  // All colors should be identical
+  assert float.loosely_equals(c1.l, with: 0.5, tolerating: 0.001)
+  assert float.loosely_equals(c2.l, with: 0.5, tolerating: 0.001)
+  assert float.loosely_equals(c3.l, with: 0.5, tolerating: 0.001)
+}
+
+// =============================================================================
+// TEMPERATURE EDGE CASES
+// =============================================================================
+
+pub fn temperature_exact_1000k_test() {
+  let color = niji.temperature(1000.0)
+  assert color.l >. 0.0
+  assert color.c >. 0.0
+}
+
+pub fn temperature_exact_40000k_test() {
+  let color = niji.temperature(40_000.0)
+  assert color.l >. 0.0
+  // Very high temperature should be bluish
+}
+
+pub fn temperature_below_range_test() {
+  let below = niji.temperature(500.0)
+  let at_min = niji.temperature(1000.0)
+  // Should be clamped to 1000K
+  assert float.loosely_equals(below.l, with: at_min.l, tolerating: 0.001)
+}
+
+pub fn temperature_above_range_test() {
+  let above = niji.temperature(50_000.0)
+  let at_max = niji.temperature(40_000.0)
+  // Should be clamped to 40000K
+  assert float.loosely_equals(above.l, with: at_max.l, tolerating: 0.001)
+}
+
+// =============================================================================
+// CONTRAST EDGE CASES
+// =============================================================================
+
+pub fn contrast_same_color_is_one_test() {
+  let color = niji.oklch(0.5, 0.2, 180.0, 1.0)
+  let ratio = niji.contrast_ratio(color, color)
+  // Same color should have contrast ratio of 1.0 (minimum)
+  assert float.loosely_equals(ratio, with: 1.0, tolerating: 0.001)
+}
+
+pub fn contrast_black_white_is_maximum_test() {
+  let black = niji.oklch(0.0, 0.0, 0.0, 1.0)
+  let white = niji.oklch(1.0, 0.0, 0.0, 1.0)
+  let ratio = niji.contrast_ratio(black, white)
+  // Black/white contrast should be 21:1
+  assert float.loosely_equals(ratio, with: 21.0, tolerating: 0.001)
+}
+
+pub fn contrast_symmetry_test() {
+  let color1 = niji.oklch(0.2, 0.1, 180.0, 1.0)
+  let color2 = niji.oklch(0.8, 0.05, 300.0, 1.0)
+  let r1 = niji.contrast_ratio(color1, color2)
+  let r2 = niji.contrast_ratio(color2, color1)
+  assert float.loosely_equals(r1, with: r2, tolerating: 0.000001)
+}
+
+// =============================================================================
+// HEX FORMATTING EDGE CASES
+// =============================================================================
+
+pub fn hex_roundtrip_all_channels_test() {
+  // Test various RGB values roundtrip through OKLCH
+  let test_values = [
+    #(0, 0, 0),
+    // Black
+    #(255, 255, 255),
+    // White
+    #(255, 0, 0),
+    // Red
+    #(0, 255, 0),
+    // Green
+    #(0, 0, 255),
+    // Blue
+    #(128, 128, 128),
+    // Gray
+    #(255, 128, 0),
+    // Orange
+    #(128, 0, 255),
+    // Purple
+  ]
+
+  list.each(test_values, fn(values) {
+    let #(r, g, b) = values
+    let original = niji.rgb_from_ints(r, g, b, 1.0)
+    let oklch = niji.rgb_to_oklch(original)
+    let converted = niji.to_rgb(oklch)
+
+    // Allow small tolerance for gamut mapping and conversion
+    assert float.loosely_equals(converted.r, with: original.r, tolerating: 0.02)
+    assert float.loosely_equals(converted.g, with: original.g, tolerating: 0.02)
+    assert float.loosely_equals(converted.b, with: original.b, tolerating: 0.02)
+  })
+}
+
+pub fn hex_with_various_alpha_values_test() {
+  let color1 = niji.rgb(1.0, 0.0, 0.0, 0.0)
+  let hex1 = niji.rgb_to_hex(color1)
+  assert hex1 == "#FF000000"
+
+  let color2 = niji.rgb(1.0, 0.0, 0.0, 0.5)
+  let hex2 = niji.rgb_to_hex(color2)
+  assert hex2 == "#FF000080"
+
+  let color3 = niji.rgb(1.0, 0.0, 0.0, 1.0)
+  let hex3 = niji.rgb_to_hex(color3)
+  assert hex3 == "#FF0000"
+}
+
+pub fn hex_lowercase_not_expected_test() {
+  // Our implementation outputs uppercase hex
+  let color = niji.rgb(0.0, 0.5, 1.0, 1.0)
+  let hex = niji.rgb_to_hex(color)
+  assert string.contains(hex, "007FFF") || string.contains(hex, "0080FF")
+}
+
+// =============================================================================
+// MANIPULATION EDGE CASES
+// =============================================================================
+
+pub fn lighten_already_white_test() {
+  let white = niji.oklch(1.0, 0.0, 0.0, 1.0)
+  let result = niji.lighten(white, 0.5)
+  let Oklch(l: l, ..) = result
+  assert l == 1.0
+}
+
+pub fn darken_already_black_test() {
+  let black = niji.oklch(0.0, 0.0, 0.0, 1.0)
+  let result = niji.darken(black, 0.5)
+  let Oklch(l: l, ..) = result
+  assert l == 0.0
+}
+
+pub fn saturate_already_zero_test() {
+  let gray = niji.oklch(0.5, 0.0, 0.0, 1.0)
+  let result = niji.saturate(gray, 0.2)
+  let Oklch(c: c, ..) = result
+  assert c == 0.2
+}
+
+pub fn desaturate_to_zero_test() {
+  let color = niji.oklch(0.5, 0.2, 180.0, 1.0)
+  let result = niji.desaturate(color, 0.5)
+  let Oklch(c: c, ..) = result
+  assert c == 0.0
+}
+
+pub fn set_alpha_clamping_test() {
+  let color = niji.oklch(0.5, 0.2, 180.0, 1.0)
+
+  let below = niji.set_alpha(color, -0.5)
+  let Oklch(alpha: a1, ..) = below
+  assert a1 == 0.0
+
+  let above = niji.set_alpha(color, 1.5)
+  let Oklch(alpha: a2, ..) = above
+  assert a2 == 1.0
+}
+
+pub fn set_l_clamping_test() {
+  let color = niji.oklch(0.5, 0.2, 180.0, 1.0)
+
+  let below = niji.set_l(color, -0.5)
+  let Oklch(l: l1, ..) = below
+  assert l1 == 0.0
+
+  let above = niji.set_l(color, 1.5)
+  let Oklch(l: l2, ..) = above
+  assert l2 == 1.0
+}
+
+pub fn set_c_negative_clamping_test() {
+  let color = niji.oklch(0.5, 0.2, 180.0, 1.0)
+
+  let below = niji.set_c(color, -0.5)
+  let Oklch(c: c, ..) = below
+  assert c == 0.0
+}
+
+pub fn set_c_no_upper_clamp_test() {
+  let color = niji.oklch(0.5, 0.2, 180.0, 1.0)
+
+  let high = niji.set_c(color, 1.5)
+  let Oklch(c: c, ..) = high
+  assert c == 1.5
+}
+
+pub fn set_h_wraparound_test() {
+  let color = niji.oklch(0.5, 0.2, 180.0, 1.0)
+
+  let above = niji.set_h(color, 450.0)
+  let Oklch(h: h1, ..) = above
+  assert float.loosely_equals(h1, with: 90.0, tolerating: 0.001)
+
+  let below = niji.set_h(color, -90.0)
+  let Oklch(h: h2, ..) = below
+  assert float.loosely_equals(h2, with: 270.0, tolerating: 0.001)
 }
