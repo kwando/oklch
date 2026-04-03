@@ -7,23 +7,23 @@
 //// ## Quick Start
 ////
 //// ```gleam
-//// import oklch
+//// import niji
 ////
 //// // Create a color
-//// let brand = oklch.oklch(0.62, 0.19, 250.0, 1.0)
+//// let brand = niji.oklch(0.62, 0.19, 250.0, 1.0)
 ////
 //// // Convert to hex for CSS
-//// let hex = oklch.to_hex(brand)
+//// let hex = niji.to_hex(brand)
 //// // -> "#3B82F6"
 ////
 //// // Create a complementary color
-//// let complement = oklch.complementary(brand)
+//// let complement = niji.complementary(brand)
 ////
 //// // Mix colors
-//// let mixed = oklch.mix(brand, complement, 0.5)
+//// let mixed = niji.mix(brand, complement, 0.5)
 ////
 //// // Output CSS format
-//// let css = oklch.to_css(mixed)
+//// let css = niji.to_css(mixed)
 //// // -> "oklch(62% 0.19 220deg)"
 //// ```
 ////

@@ -1,7 +1,11 @@
-# oklch
+<p align="center">
+  <img src="logo.png" alt="niji logo" width="300">
+</p>
 
-[![Package Version](https://img.shields.io/hexpm/v/oklch)](https://hex.pm/packages/oklch)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/oklch/)
+# niji
+
+[![Package Version](https://img.shields.io/hexpm/v/niji)](https://hex.pm/packages/niji)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/niji/)
 
 A practical OKLCH color toolkit for Gleam.
 
@@ -37,32 +41,32 @@ In this library, `to_rgb/1` applies CSS-inspired gamut mapping so colors that ca
 ## Installation
 
 ```sh
-gleam add oklch@1
+gleam add niji@1
 ```
 
 ## Quick Start
 
 ```gleam
-import oklch
+import niji
 
 pub fn main() {
-  let brand = oklch.oklch(0.62, 0.19, 250.0, 1.0)
+  let brand = niji.oklch(0.62, 0.19, 250.0, 1.0)
 
   // Convert to CSS and hex
-  let css = oklch.to_css(brand)
-  let hex = oklch.to_hex(brand)
+  let css = niji.to_css(brand)
+  let hex = niji.to_hex(brand)
 
   // Generate a complementary color
-  let complement = oklch.complementary(brand)
+  let complement = niji.complementary(brand)
 
   // Mix 20% toward complement
-  let mixed = oklch.mix(brand, complement, 0.2)
+  let mixed = niji.mix(brand, complement, 0.2)
 
   // Guarantee sRGB-safe output for UI
-  let safe = oklch.gamut_map(mixed)
+  let safe = niji.gamut_map(mixed)
 
   // Print values in terminal color
-  let preview = oklch.ansi_bg(safe, "  OKLCH  ")
+  let preview = niji.ansi_bg(safe, "  OKLCH  ")
   preview
 }
 ```
@@ -131,31 +135,31 @@ All constructors normalize/clamp inputs to safe ranges.
 ### Parse hex and rotate hue
 
 ```gleam
-import oklch
+import niji
 import gleam_community/colour
 import gleam/result
 
 pub fn main() {
   let assert Ok(rotated) =
     colour.from_rgb_hex_string("#3366FF")
-    |> result.map(oklch.from_colour)
-    |> result.map(oklch.rotate_hue(_, 45.0))
+    |> result.map(niji.from_colour)
+    |> result.map(niji.rotate_hue(_, 45.0))
 
-  oklch.to_css(rotated)
+  niji.to_css(rotated)
 }
 ```
 
 ### Check contrast
 
 ```gleam
-import oklch
+import niji
 
 pub fn main() {
-  let text = oklch.oklch(0.15, 0.02, 250.0, 1.0)
-  let bg = oklch.oklch(0.96, 0.01, 250.0, 1.0)
+  let text = niji.oklch(0.15, 0.02, 250.0, 1.0)
+  let bg = niji.oklch(0.96, 0.01, 250.0, 1.0)
 
-  let ratio = oklch.contrast_ratio(text, bg)
-  let passes = oklch.wcag_aa(ratio)
+  let ratio = niji.contrast_ratio(text, bg)
+  let passes = niji.wcag_aa(ratio)
 
   #(ratio, passes)
 }
@@ -176,5 +180,5 @@ gleam run
 
 ## Documentation
 
-- Hex package: <https://hex.pm/packages/oklch>
-- API docs: <https://hexdocs.pm/oklch/>
+- Hex package: <https://hex.pm/packages/niji>
+- API docs: <https://hexdocs.pm/niji/>
