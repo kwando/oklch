@@ -43,11 +43,17 @@ pub fn main() {
   |> string.concat
   |> io.println
 
-  gradient(
-    "This is a very long line that should show off the gradient pretty well",
-    a,
+  niji.gradient_fold(
     c,
+    niji.invert_full(c) |> niji.desaturate(0.5) |> niji.lighten(-0.3),
+    list.length(tokens),
+    [],
+    fn(tokens, color) { [niji.ansi_bg(" ", color), ..tokens] },
   )
+  |> string.concat
+  |> io.println
+
+  gradient(text, a, c)
   |> io.println()
 
   // ----------------------------------------------------------------
