@@ -35,9 +35,10 @@ pub fn main() {
   io.println("Gradients")
   let text =
     "This is a very long line that should show off the gradient pretty well"
+  let grardient_length = 80
   let tokens = string.to_graphemes(text)
 
-  niji.gradient_fold(c, a, list.length(tokens), [], fn(tokens, color) {
+  niji.gradient_fold(c, a, grardient_length, [], fn(tokens, color) {
     [niji.ansi_bg(" ", color), ..tokens]
   })
   |> string.concat
@@ -46,15 +47,23 @@ pub fn main() {
   niji.gradient_fold(
     c,
     niji.invert_full(c) |> niji.desaturate(0.5) |> niji.lighten(-0.3),
-    list.length(tokens),
+    grardient_length,
     [],
     fn(tokens, color) { [niji.ansi_bg(" ", color), ..tokens] },
   )
   |> string.concat
   |> io.println
 
-  gradient(text, a, c)
-  |> io.println()
+  let text = string.repeat(" ", grardient_length)
+  { gradient(text, from_hex("#FC5C7D"), from_hex("#6A82FB")) |> io.println }
+  { gradient(text, from_hex("#23074d"), from_hex("#cc5333")) |> io.println }
+  { gradient(text, from_hex("#fffbd5"), from_hex("#b20a2c")) |> io.println }
+  { gradient(text, from_hex("#D3CCE3"), from_hex("#b20a2c")) |> io.println }
+  { gradient(text, from_hex("#00F260"), from_hex("#0575E6")) |> io.println }
+  { gradient(text, from_hex("#fc4a1a"), from_hex("#f7b733")) |> io.println }
+  { gradient(text, from_hex("#22c1c3"), from_hex("#fdbb2d")) |> io.println }
+  { gradient(text, from_hex("#159957"), from_hex("#155799")) |> io.println }
+  { gradient(text, from_hex("#000046"), from_hex("#1CB5E0")) |> io.println }
 
   // ----------------------------------------------------------------
   io.println("Temperature")
@@ -79,6 +88,11 @@ fn gradient(text: String, col1: niji.Oklch, col2: niji.Oklch) -> String {
     niji.ansi_bg(char, color)
   })
   |> string.join("")
+}
+
+fn from_hex(hex) {
+  let assert Ok(colour) = colour.from_rgb_hex_string(hex)
+  niji.oklch_from_colour(colour)
 }
 
 fn darken_lighten(color: niji.Oklch) {
