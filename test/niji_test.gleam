@@ -1,4 +1,5 @@
 import gleam/float
+import gleam/list
 import gleam/result
 import gleam/string
 import gleam_community/colour
@@ -641,4 +642,165 @@ pub fn gamut_mapping_with_alpha_test() {
   let rgb = niji.to_rgb(color)
   let Rgb(r: _, g: _, b: _, alpha: a) = rgb
   assert a == 0.5
+}
+
+// =============================================================================
+// STEPS TESTS
+// =============================================================================
+
+pub fn steps_basic_test() {
+  let from = niji.oklch(0.3, 0.2, 0.0, 1.0)
+  let to = niji.oklch(0.7, 0.2, 180.0, 1.0)
+  let scale = niji.steps(from, to, 5)
+
+  // Should return 5 colors
+  assert list.length(scale) == 5
+
+  // First color should be approximately 'from'
+  let assert [first, ..] = scale
+  assert float.loosely_equals(first.l, with: 0.3, tolerating: 0.01)
+}
+
+pub fn steps_count_edge_cases_test() {
+  // count = 0 should return empty list
+  let empty =
+    niji.steps(
+      niji.oklch(0.5, 0.2, 0.0, 1.0),
+      niji.oklch(0.7, 0.2, 180.0, 1.0),
+      0,
+    )
+  assert list.is_empty(empty)
+
+  // count = 1 should return single color (from)
+  let single =
+    niji.steps(
+      niji.oklch(0.5, 0.2, 0.0, 1.0),
+      niji.oklch(0.7, 0.2, 180.0, 1.0),
+      1,
+    )
+  assert list.length(single) == 1
+
+  // count = 2 should return from and to
+  let two =
+    niji.steps(
+      niji.oklch(0.3, 0.2, 0.0, 1.0),
+      niji.oklch(0.7, 0.2, 180.0, 1.0),
+      2,
+    )
+  assert list.length(two) == 2
+}
+
+pub fn steps_hue_wraparound_test() {
+  // Test hue interpolation across 0/360 boundary
+  let from = niji.oklch(0.5, 0.2, 350.0, 1.0)
+  let to = niji.oklch(0.5, 0.2, 10.0, 1.0)
+  let scale = niji.steps(from, to, 3)
+
+  // Middle color should be around 0/360 (wrapped)
+  let assert [_, middle, _] = scale
+  // Hue should be either near 0 or near 360, both valid for wraparound
+  assert middle.h <. 20.0 || middle.h >. 340.0
+}
+
+pub fn steps_grayscale_test() {
+  // Grayscale should have monotonic lightness
+  let black = niji.oklch(0.0, 0.0, 0.0, 1.0)
+  let white = niji.oklch(1.0, 0.0, 0.0, 1.0)
+  let scale = niji.steps(black, white, 5)
+
+  // Check that lightness increases monotonically
+  let assert [c1, c2, c3, c4, c5] = scale
+  assert c1.l <=. c2.l
+  assert c2.l <=. c3.l
+  assert c3.l <=. c4.l
+  assert c4.l <=. c5.l
+}
+
+// =============================================================================
+// TEMPERATURE TESTS
+// =============================================================================
+
+pub fn temperature_warm_test() {
+  // 2700K should be warm (orange-white)
+  let warm = niji.temperature(2700.0)
+
+  // Should be reasonably light
+  assert warm.l >. 0.5
+  // Should have some chroma (not gray)
+  assert warm.c >. 0.05
+  // Should be in orange/red region (hue around 20-60)
+  assert warm.h >. 20.0
+  assert warm.h <. 80.0
+}
+
+pub fn temperature_daylight_test() {
+  // 6500K should be near white
+  let daylight = niji.temperature(6500.0)
+
+  // Should be fairly light
+  assert daylight.l >. 0.8
+  // Should have low chroma (near neutral)
+  assert daylight.c <. 0.1
+}
+
+pub fn temperature_cool_test() {
+  // 15000K should be cooler (higher K = cooler/bluer in approximation)
+  let cool = niji.temperature(15_000.0)
+  let warm = niji.temperature(2700.0)
+
+  // Should be reasonably light
+  assert cool.l >. 0.5
+  // Should have some chroma
+  assert cool.c >. 0.05
+  // Cooler temperature should have different hue than warm
+  // Note: The approximation may not produce exact blue, but should differ from warm
+  assert cool.h != warm.h
+}
+
+pub fn temperature_clamping_test() {
+  // Values below 1000K should be clamped
+  let very_cold = niji.temperature(500.0)
+  let clamped_cold = niji.temperature(1000.0)
+  assert float.loosely_equals(
+    very_cold.l,
+    with: clamped_cold.l,
+    tolerating: 0.001,
+  )
+
+  // Values above 40000K should be clamped
+  let very_hot = niji.temperature(50_000.0)
+  let clamped_hot = niji.temperature(40_000.0)
+  assert float.loosely_equals(
+    very_hot.l,
+    with: clamped_hot.l,
+    tolerating: 0.001,
+  )
+}
+
+pub fn temperature_converts_to_rgb_test() {
+  // All temperature colors should be convertible to RGB
+  // (gamut mapping will handle any out-of-gamut colors)
+  let warm = niji.temperature(2700.0)
+  let daylight = niji.temperature(6500.0)
+  let cool = niji.temperature(15_000.0)
+
+  // Should be able to convert to RGB without errors
+  let warm_rgb = niji.to_rgb(warm)
+  let daylight_rgb = niji.to_rgb(daylight)
+  let cool_rgb = niji.to_rgb(cool)
+
+  // Verify RGB values are in valid range [0, 1]
+  let Rgb(r: wr, g: wg, b: wb, ..) = warm_rgb
+  let Rgb(r: dr, g: dg, b: db, ..) = daylight_rgb
+  let Rgb(r: cr, g: cg, b: cb, ..) = cool_rgb
+
+  assert wr >=. 0.0 && wr <=. 1.0
+  assert wg >=. 0.0 && wg <=. 1.0
+  assert wb >=. 0.0 && wb <=. 1.0
+  assert dr >=. 0.0 && dr <=. 1.0
+  assert dg >=. 0.0 && dg <=. 1.0
+  assert db >=. 0.0 && db <=. 1.0
+  assert cr >=. 0.0 && cr <=. 1.0
+  assert cg >=. 0.0 && cg <=. 1.0
+  assert cb >=. 0.0 && cb <=. 1.0
 }

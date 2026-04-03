@@ -57,6 +57,7 @@
 import gleam/bit_array
 import gleam/float
 import gleam/int
+import gleam/list
 import gleam_community/colour.{type Colour}
 
 // =============================================================================
@@ -884,6 +885,151 @@ fn evaluate_candidate(candidate: Oklch) -> #(Bool, Oklch, Float, Bool, Bool) {
       let close_enough = acceptable && jnd -. e <=. epsilon
       #(False, clipped, e, acceptable, close_enough)
     }
+  }
+}
+
+// =============================================================================
+// COLOR SCALE GENERATION
+// =============================================================================
+
+/// Generate a list of colors forming a perceptually uniform scale 
+/// between two colors in OKLCH space.
+///
+/// The colors are evenly distributed with proper hue interpolation 
+/// that handles the 0/360 degree wraparound.
+///
+/// ## Examples
+/// ```gleam
+/// let blue = niji.oklch(0.5, 0.2, 250.0, 1.0)
+/// let red = niji.oklch(0.5, 0.2, 25.0, 1.0)
+/// let scale = niji.steps(blue, red, 5)
+/// // Returns 5 colors from blue to red
+/// ```
+pub fn steps(from: Oklch, to: Oklch, count: Int) -> List(Oklch) {
+  case count {
+    n if n <= 0 -> []
+    1 -> [from]
+    n -> generate_steps(from, to, n)
+  }
+}
+
+fn generate_steps(from: Oklch, to: Oklch, count: Int) -> List(Oklch) {
+  // Generate count colors evenly spaced between from and to
+  // We use mix() which handles proper hue interpolation
+  generate_steps_recursive(from, to, count, 0, [])
+  |> list.reverse()
+}
+
+fn generate_steps_recursive(
+  from: Oklch,
+  to: Oklch,
+  count: Int,
+  index: Int,
+  acc: List(Oklch),
+) -> List(Oklch) {
+  case index >= count {
+    True -> acc
+    False -> {
+      let weight = int.to_float(index) /. int.to_float(count - 1)
+      let color = mix(from, to, weight)
+      generate_steps_recursive(from, to, count, index + 1, [color, ..acc])
+    }
+  }
+}
+
+// =============================================================================
+// COLOR TEMPERATURE
+// =============================================================================
+
+/// Create a color from color temperature in Kelvin.
+///
+/// Approximates the color of black-body radiation at the given
+/// temperature using an algorithm by Tanner Helland. This is a 
+/// mathematical approximation and not physically exact.
+///
+/// ## Typical Values
+/// - 2700K: Warm incandescent (orange-white)
+/// - 4000K: Cool white fluorescent  
+/// - 6500K: Daylight (neutral white)
+/// - 15000K: Deep blue sky
+///
+/// ## Valid Range
+/// - 1000K - 40000K (values outside this are clamped)
+///
+/// ## Examples
+/// ```gleam
+/// let warm = niji.temperature(2700.0)    // Warm white
+/// let daylight = niji.temperature(6500.0) // Neutral white
+/// let cool = niji.temperature(15000.0)   // Cool blue
+/// ```
+pub fn temperature(kelvin: Float) -> Oklch {
+  let k = float.clamp(kelvin, 1000.0, 40_000.0) /. 100.0
+
+  // Calculate RGB using Tanner Helland's approximation
+  let r = temperature_red(k)
+  let g = temperature_green(k)
+  let b = temperature_blue(k)
+
+  // Convert to OKLCH
+  rgb(r, g, b, 1.0)
+  |> rgb_to_oklch()
+}
+
+fn temperature_red(k: Float) -> Float {
+  case k <=. 66.0 {
+    True -> 1.0
+    False -> {
+      let t = k -. 60.0
+      let r = 329.698727446 *. pow_f(t, -0.1332047592)
+      float.clamp(r /. 255.0, 0.0, 1.0)
+    }
+  }
+}
+
+fn temperature_green(k: Float) -> Float {
+  let g = case k <=. 66.0 {
+    True -> {
+      99.4708025861 *. log_f(k) -. 161.1195681661
+    }
+    False -> {
+      let t = k -. 60.0
+      288.1221695283 *. pow_f(t, -0.0755148492)
+    }
+  }
+  float.clamp(g /. 255.0, 0.0, 1.0)
+}
+
+fn temperature_blue(k: Float) -> Float {
+  case k >=. 66.0 {
+    True -> 1.0
+    False -> {
+      case k <=. 19.0 {
+        True -> 0.0
+        False -> {
+          138.5177312231 *. log_f(k -. 10.0) -. 305.0447927307
+        }
+      }
+    }
+  }
+  |> fn(b) { float.clamp(b /. 255.0, 0.0, 1.0) }
+}
+
+fn log_f(x: Float) -> Float {
+  case x >. 0.0 {
+    True -> {
+      case float.logarithm(x) {
+        Ok(v) -> v
+        Error(_) -> 0.0
+      }
+    }
+    False -> 0.0
+  }
+}
+
+fn pow_f(base: Float, exponent: Float) -> Float {
+  case float.power(base, exponent) {
+    Ok(v) -> v
+    Error(_) -> 0.0
   }
 }
 
