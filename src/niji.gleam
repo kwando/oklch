@@ -44,7 +44,7 @@
 //// - **Gamut mapping**: CSS-compliant gamut mapping for out-of-gamut colors
 //// - **Accessibility**: `contrast_ratio()`, `wcag_aa()`, `wcag_aaa()`
 //// - **Terminal output**: `ansi()`, `ansi_bg()`, `ansi_fg_bg()`
-//// - **Interop**: `from_colour()`, `to_colour()` for gleam_community/colour
+//// - **Interop**: `oklch_from_colour()`, `oklch_to_colour()` for gleam_community/colour
 ////
 //// ## Gamut Mapping
 ////
@@ -595,7 +595,7 @@ pub fn wcag_aaa_large_text(ratio: Float) -> Bool {
 // =============================================================================
 
 /// Wrap text in ANSI escape codes to display it with the given foreground color.
-pub fn ansi(color: Oklch, text: String) -> String {
+pub fn ansi(text: String, color: Oklch) -> String {
   let rgb = to_rgb(color)
   let Rgb(r: r, g: g, b: b, alpha: _) = rgb
   let r = float_to_256(r)
@@ -614,7 +614,7 @@ pub fn ansi(color: Oklch, text: String) -> String {
 }
 
 /// Wrap text in ANSI escape codes to display it with the given background color.
-pub fn ansi_bg(color: Oklch, text: String) -> String {
+pub fn ansi_bg(text: String, color: Oklch) -> String {
   let rgb = to_rgb(color)
   let Rgb(r: r, g: g, b: b, alpha: _) = rgb
   let r = float_to_256(r)
@@ -633,7 +633,7 @@ pub fn ansi_bg(color: Oklch, text: String) -> String {
 }
 
 /// Wrap text in ANSI escape codes to display it with both foreground and background colors.
-pub fn ansi_fg_bg(fg: Oklch, bg: Oklch, text: String) -> String {
+pub fn ansi_fg_bg(text: String, fg: Oklch, bg: Oklch) -> String {
   let fg_rgb = to_rgb(fg)
   let Rgb(r: fg_r, g: fg_g, b: fg_b, alpha: _) = fg_rgb
 
@@ -1105,15 +1105,15 @@ fn pow_f(base: Float, exponent: Float) -> Float {
 // =============================================================================
 
 @external(erlang, "math", "cos")
-@external(javascript, "Math", "cos")
+@external(javascript, "./niji_ffi.mjs", "cos")
 fn cos(x: Float) -> Float
 
 @external(erlang, "math", "sin")
-@external(javascript, "Math", "sin")
+@external(javascript, "./niji_ffi.mjs", "sin")
 fn sin(x: Float) -> Float
 
 @external(erlang, "math", "atan2")
-@external(javascript, "Math", "atan2")
+@external(javascript, "./niji_ffi.mjs", "atan2")
 fn atan2(y: Float, x: Float) -> Float
 
 // =============================================================================
@@ -1122,13 +1122,13 @@ fn atan2(y: Float, x: Float) -> Float
 
 /// Convert a gleam_community_colour Colour to OKLCH.
 /// This conversion always succeeds.
-pub fn from_colour(colour: Colour) -> Oklch {
+pub fn oklch_from_colour(colour: Colour) -> Oklch {
   let #(r, g, b, a) = colour.to_rgba(colour)
   rgb_to_oklch(Rgb(r: r, g: g, b: b, alpha: a))
 }
 
 /// Convert OKLCH to a gleam_community_colour Colour.
-pub fn to_colour(oklch_color: Oklch) -> Result(Colour, Nil) {
+pub fn oklch_to_colour(oklch_color: Oklch) -> Result(Colour, Nil) {
   let Rgb(r: r, g: g, b: b, alpha: alpha) = to_rgb(oklch_color)
   colour.from_rgba(r, g, b, alpha)
 }

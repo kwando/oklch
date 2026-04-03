@@ -269,7 +269,7 @@ pub fn wcag_aaa_large_text_pass_test() {
 
 pub fn ansi_fg_test() {
   let color = niji.oklch(0.6, 0.2, 180.0, 1.0)
-  let result = niji.ansi(color, "Hello")
+  let result = niji.ansi("Hello", color)
   assert string.contains(result, "Hello")
   assert string.contains(result, "\u{001b}[38;2;")
   assert string.contains(result, "\u{001b}[0m")
@@ -277,7 +277,7 @@ pub fn ansi_fg_test() {
 
 pub fn ansi_bg_test() {
   let color = niji.oklch(0.6, 0.2, 180.0, 1.0)
-  let result = niji.ansi_bg(color, "Hello")
+  let result = niji.ansi_bg("Hello", color)
   assert string.contains(result, "Hello")
   assert string.contains(result, "\u{001b}[48;2;")
   assert string.contains(result, "\u{001b}[0m")
@@ -286,7 +286,7 @@ pub fn ansi_bg_test() {
 pub fn ansi_fg_bg_test() {
   let fg = niji.oklch(0.6, 0.2, 180.0, 1.0)
   let bg = niji.oklch(0.95, 0.0, 0.0, 1.0)
-  let result = niji.ansi_fg_bg(fg, bg, "Hello")
+  let result = niji.ansi_fg_bg("Hello", fg, bg)
   assert string.contains(result, "Hello")
   assert string.contains(result, "\u{001b}[38;2;")
   assert string.contains(result, "\u{001b}[48;2;")
@@ -297,14 +297,14 @@ pub fn ansi_black_and_white_test() {
   let black = niji.oklch(0.0, 0.0, 0.0, 1.0)
   let white = niji.oklch(1.0, 0.0, 0.0, 1.0)
 
-  let result = niji.ansi_fg_bg(black, white, "X")
+  let result = niji.ansi_fg_bg("X", black, white)
   assert string.contains(result, "X")
   assert string.contains(result, "\u{001b}[38;2;")
   assert string.contains(result, "\u{001b}[48;2;")
 }
 
-pub fn from_colour_test() {
-  let niji_color = niji.from_colour(colour.red)
+pub fn oklch_from_colour_test() {
+  let niji_color = niji.oklch_from_colour(colour.red)
   let Oklch(l: l, c: c, h: h, alpha: alpha) = niji_color
   assert alpha == 1.0
   assert l >. 0.0
@@ -314,16 +314,16 @@ pub fn from_colour_test() {
   assert h <. 360.0
 }
 
-pub fn to_colour_test() {
+pub fn oklch_to_colour_test() {
   let niji_color = niji.oklch(0.5, 0.2, 180.0, 1.0)
-  let result = niji.to_colour(niji_color)
+  let result = niji.oklch_to_colour(niji_color)
   assert result |> result.is_ok
 }
 
 pub fn round_trip_colour_test() {
   let original = colour.light_blue
-  let niji_color = niji.from_colour(original)
-  let assert Ok(converted_back) = niji.to_colour(niji_color)
+  let niji_color = niji.oklch_from_colour(original)
+  let assert Ok(converted_back) = niji.oklch_to_colour(niji_color)
   let #(r1, g1, b1, a1) = colour.to_rgba(original)
   let #(r2, g2, b2, a2) = colour.to_rgba(converted_back)
   assert float.loosely_equals(r1, with: r2, tolerating: 0.01)

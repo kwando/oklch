@@ -1,36 +1,64 @@
+import gleam/float
 import gleam/int
 import gleam/io
 import gleam/list
-import gleam/result
 import gleam/string
 import gleam_community/colour
 import niji
 
 pub fn main() {
-  let assert Ok(a) =
-    colour.from_rgb_hex_string("#660000")
-    |> result.map(niji.from_colour)
-    |> result.map(niji.rotate_hue(_, 180.0))
-  let assert Ok(b) =
-    colour.from_rgb_hex_string("#000066")
-    |> result.map(niji.from_colour)
+  let a = niji.oklch(0.4, 0.2, 0.0, 1.0)
+  let #(b, c) = niji.triadic(a)
 
-  niji.ansi_bg(a, "HELLO WORLD")
-  |> io.println()
+  io.println("Light / Darken")
+  darken_lighten(a)
+  darken_lighten(b)
+  darken_lighten(c)
 
-  niji.ansi_bg(b, "HELLO WORLD")
-  |> io.println()
+  darken_lighten(colour.pink |> niji.oklch_from_colour)
+  darken_lighten(colour.red |> niji.oklch_from_colour)
+  darken_lighten(colour.blue |> niji.oklch_from_colour)
+  darken_lighten(colour.green |> niji.oklch_from_colour |> niji.darken(0.2))
+
+  io.println("Hue rotation")
+
+  hue_rotatation(a |> niji.darken(0.2))
+  hue_rotatation(a |> niji.darken(0.1))
+  hue_rotatation(a |> niji.darken(0.0))
+  hue_rotatation(a |> niji.lighten(0.1))
+  hue_rotatation(a |> niji.lighten(0.2))
+  hue_rotatation(a |> niji.lighten(0.3))
+  hue_rotatation(a |> niji.lighten(0.4))
+  hue_rotatation(a |> niji.lighten(0.5))
+
+  // ----------------------------------------------------------------
+  io.println("Gradients")
+  let text =
+    "This is a very long line that should show off the gradient pretty well"
+  let tokens = string.to_graphemes(text)
+
+  niji.gradient_fold(c, a, list.length(tokens), [], fn(tokens, color) {
+    [niji.ansi_bg(" ", color), ..tokens]
+  })
+  |> string.concat
+  |> io.println
 
   gradient(
     "This is a very long line that should show off the gradient pretty well",
     a,
-    b,
+    c,
   )
   |> io.println()
 
-  let assert Ok(colors) = palette("#993399", 7)
+  // ----------------------------------------------------------------
+  io.println("Temperature")
+  let colors =
+    int.range(1, 40, [], fn(acc, i) {
+      [niji.temperature(int.to_float(i * 1000)), ..acc]
+    })
+    |> list.reverse
   colors
-  |> list.map(fn(color) { niji.ansi_bg(color, "  ") })
+  |> list.map(fn(color) { niji.ansi_bg("  ", color) })
   |> string.concat()
   |> io.println()
 }
@@ -42,20 +70,53 @@ fn gradient(text: String, col1: niji.Oklch, col2: niji.Oklch) -> String {
   list.index_map(chars, fn(char, index) {
     let alpha = int.to_float(index) /. int.to_float(splits)
     let color = niji.mix(col1, col2, alpha)
-    niji.ansi_bg(color, char)
+    niji.ansi_bg(char, color)
   })
   |> string.join("")
 }
 
-fn palette(hex: String, number_of_colors: Int) -> Result(List(niji.Oklch), Nil) {
-  use parsed <- result.try(colour.from_rgb_hex_string(hex))
-  let color = niji.from_colour(parsed)
+fn darken_lighten(color: niji.Oklch) {
+  let steps = 7
+  let step_size = 0.05
+  int.range(-steps, steps + 1, [], fn(acc, x) {
+    let amount =
+      x
+      |> int.to_float()
+      |> float.multiply(step_size)
 
-  let diff = 360.0 /. int.to_float(number_of_colors)
-
-  int.range(0, number_of_colors - 1, [], fn(acc, index) {
-    [niji.rotate_hue(color, int.to_float(index) *. diff), ..acc]
+    [#(amount, niji.lighten(color, amount)), ..acc]
+  })
+  |> list.map(fn(color) {
+    niji.ansi_bg(
+      case float.loosely_equals(color.0, 0.0, 0.001) {
+        True -> " " <> niji.to_hex(color.1) <> " "
+        False ->
+          " "
+          <> color.0
+          |> float.to_precision(2)
+          |> float.to_string()
+          <> " "
+      },
+      color.1,
+    )
   })
   |> list.reverse
-  |> Ok
+  |> string.concat
+  |> io.println
+}
+
+fn hue_rotatation(color) {
+  let steps = 40
+  let step_size = 360.0 /. int.to_float(steps)
+  int.range(0, steps, [], fn(acc, degree) {
+    [
+      niji.ansi_bg(
+        "  ",
+        color |> niji.rotate_hue({ degree |> int.to_float } *. step_size),
+      ),
+      ..acc
+    ]
+  })
+  |> string.concat
+  |> io.println
 }

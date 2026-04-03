@@ -121,14 +121,14 @@ All constructors normalize/clamp inputs to safe ranges.
 
 ### ANSI output
 
-- `ansi(color, text)` (foreground)
-- `ansi_bg(color, text)` (background)
-- `ansi_fg_bg(fg, bg, text)`
+- `ansi(text, color)` (foreground)
+- `ansi_bg(text, color)` (background)
+- `ansi_fg_bg(text, fg, bg)`
 
 ### `gleam_community/colour` interop
 
-- `from_colour(colour)`
-- `to_colour(oklch_color)`
+- `oklch_from_colour(colour)`
+- `oklch_to_colour(oklch_color)`
 
 ## Examples
 
@@ -142,7 +142,7 @@ import gleam/result
 pub fn main() {
   let assert Ok(rotated) =
     colour.from_rgb_hex_string("#3366FF")
-    |> result.map(niji.from_colour)
+    |> result.map(niji.oklch_from_colour)
     |> result.map(niji.rotate_hue(_, 45.0))
 
   niji.to_css(rotated)
