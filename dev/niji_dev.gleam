@@ -33,10 +33,7 @@ pub fn main() {
 
   // ----------------------------------------------------------------
   io.println("Gradients")
-  let text =
-    "This is a very long line that should show off the gradient pretty well"
   let grardient_length = 80
-  let tokens = string.to_graphemes(text)
 
   niji.gradient_fold(c, a, grardient_length, [], fn(tokens, color) {
     [niji.ansi_bg(" ", color), ..tokens]
