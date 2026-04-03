@@ -6,7 +6,7 @@ version = "1.0.0"
 #
 description = "Oklch color manipulation in gleam"
 licences = ["MIT"]
-repository = { type = "github", user = "kwando", repo = "oklch" }
+repository = { type = "github", user = "kwando", repo = "niji" }
 # links = [{ title = "Website", href = "" }]
 #
 # For a full reference of all the available options, you can have a look at
