@@ -1,4 +1,5 @@
 import gleam/float
+import gleam/int
 import gleam/list
 import gleam/result
 import gleam/string
@@ -645,75 +646,198 @@ pub fn gamut_mapping_with_alpha_test() {
 }
 
 // =============================================================================
-// STEPS TESTS
+// GRADIENT_FOLD TESTS
 // =============================================================================
 
-pub fn steps_basic_test() {
+pub fn gradient_fold_basic_test() {
   let from = niji.oklch(0.3, 0.2, 0.0, 1.0)
   let to = niji.oklch(0.7, 0.2, 180.0, 1.0)
-  let scale = niji.steps(from, to, 5)
 
-  // Should return 5 colors
-  assert list.length(scale) == 5
+  // Build a list of colors by folding
+  let colors =
+    niji.gradient_fold(from, to, 5, [], fn(acc, color) { [color, ..acc] })
+    |> list.reverse()
+
+  // Should have 5 colors
+  assert list.length(colors) == 5
 
   // First color should be approximately 'from'
-  let assert [first, ..] = scale
+  let assert [first, ..] = colors
   assert float.loosely_equals(first.l, with: 0.3, tolerating: 0.01)
+
+  // Last color should be approximately 'to'
+  let assert [_, _, _, _, last] = colors
+  assert float.loosely_equals(last.l, with: 0.7, tolerating: 0.01)
+  assert float.loosely_equals(last.h, with: 180.0, tolerating: 0.5)
 }
 
-pub fn steps_count_edge_cases_test() {
-  // count = 0 should return empty list
-  let empty =
-    niji.steps(
-      niji.oklch(0.5, 0.2, 0.0, 1.0),
-      niji.oklch(0.7, 0.2, 180.0, 1.0),
-      0,
-    )
-  assert list.is_empty(empty)
+pub fn gradient_fold_builds_list_test() {
+  let from = niji.oklch(0.5, 0.2, 0.0, 1.0)
+  let to = niji.oklch(0.5, 0.2, 180.0, 1.0)
 
-  // count = 1 should return single color (from)
-  let single =
-    niji.steps(
-      niji.oklch(0.5, 0.2, 0.0, 1.0),
-      niji.oklch(0.7, 0.2, 180.0, 1.0),
-      1,
-    )
-  assert list.length(single) == 1
+  // Build hex strings
+  let hexes =
+    niji.gradient_fold(from, to, 3, [], fn(acc, color) {
+      [niji.to_hex(color), ..acc]
+    })
+    |> list.reverse()
 
-  // count = 2 should return from and to
-  let two =
-    niji.steps(
-      niji.oklch(0.3, 0.2, 0.0, 1.0),
-      niji.oklch(0.7, 0.2, 180.0, 1.0),
-      2,
-    )
-  assert list.length(two) == 2
+  // Should have 3 hex strings
+  assert list.length(hexes) == 3
+
+  // Verify each is a valid hex string
+  list.each(hexes, fn(hex) {
+    assert string.length(hex) == 7
+    assert string.starts_with(hex, "#")
+  })
 }
 
-pub fn steps_hue_wraparound_test() {
+pub fn gradient_fold_count_zero_test() {
+  let from = niji.oklch(0.3, 0.2, 0.0, 1.0)
+  let to = niji.oklch(0.7, 0.2, 180.0, 1.0)
+
+  // count = 0 should return initial accumulator unchanged
+  let result =
+    niji.gradient_fold(from, to, 0, "initial", fn(_, color) {
+      niji.to_hex(color)
+    })
+
+  assert result == "initial"
+}
+
+pub fn gradient_fold_count_one_test() {
+  let from = niji.oklch(0.3, 0.2, 0.0, 1.0)
+  let to = niji.oklch(0.7, 0.2, 180.0, 1.0)
+
+  // count = 1 should call callback once with 'from' color
+  let result =
+    niji.gradient_fold(from, to, 1, [], fn(acc, color) { [color, ..acc] })
+    |> list.reverse()
+
+  assert list.length(result) == 1
+
+  let assert [only] = result
+  assert float.loosely_equals(only.l, with: 0.3, tolerating: 0.001)
+}
+
+pub fn gradient_fold_count_two_test() {
+  let from = niji.oklch(0.3, 0.2, 0.0, 1.0)
+  let to = niji.oklch(0.7, 0.2, 180.0, 1.0)
+
+  // count = 2 should call callback with 'from' and 'to'
+  let result =
+    niji.gradient_fold(from, to, 2, [], fn(acc, color) { [color, ..acc] })
+    |> list.reverse()
+
+  assert list.length(result) == 2
+
+  let assert [first, last] = result
+  assert float.loosely_equals(first.l, with: 0.3, tolerating: 0.001)
+  assert float.loosely_equals(last.l, with: 0.7, tolerating: 0.001)
+}
+
+pub fn gradient_fold_hue_wraparound_test() {
   // Test hue interpolation across 0/360 boundary
   let from = niji.oklch(0.5, 0.2, 350.0, 1.0)
   let to = niji.oklch(0.5, 0.2, 10.0, 1.0)
-  let scale = niji.steps(from, to, 3)
 
-  // Middle color should be around 0/360 (wrapped)
-  let assert [_, middle, _] = scale
-  // Hue should be either near 0 or near 360, both valid for wraparound
+  let colors =
+    niji.gradient_fold(from, to, 3, [], fn(acc, color) { [color, ..acc] })
+    |> list.reverse()
+
+  let assert [_, middle, _] = colors
+  // Middle color should have hue around 0/360 (wrapped)
   assert middle.h <. 20.0 || middle.h >. 340.0
 }
 
-pub fn steps_grayscale_test() {
-  // Grayscale should have monotonic lightness
+pub fn gradient_fold_grayscale_monotonic_test() {
+  // Grayscale gradient should have monotonic lightness
   let black = niji.oklch(0.0, 0.0, 0.0, 1.0)
   let white = niji.oklch(1.0, 0.0, 0.0, 1.0)
-  let scale = niji.steps(black, white, 5)
+
+  let colors =
+    niji.gradient_fold(black, white, 5, [], fn(acc, color) { [color, ..acc] })
+    |> list.reverse()
 
   // Check that lightness increases monotonically
-  let assert [c1, c2, c3, c4, c5] = scale
+  let assert [c1, c2, c3, c4, c5] = colors
   assert c1.l <=. c2.l
   assert c2.l <=. c3.l
   assert c3.l <=. c4.l
   assert c4.l <=. c5.l
+}
+
+pub fn gradient_fold_sum_lightness_test() {
+  let from = niji.oklch(0.2, 0.0, 0.0, 1.0)
+  let to = niji.oklch(0.8, 0.0, 0.0, 1.0)
+
+  // Sum all lightness values (5 steps: 0.2, 0.35, 0.5, 0.65, 0.8)
+  let sum =
+    niji.gradient_fold(from, to, 5, 0.0, fn(acc, color) { acc +. color.l })
+
+  // Expected: 0.2 + 0.35 + 0.5 + 0.65 + 0.8 = 2.5
+  assert float.loosely_equals(sum, with: 2.5, tolerating: 0.01)
+}
+
+pub fn gradient_fold_average_chroma_test() {
+  let from = niji.oklch(0.5, 0.1, 0.0, 1.0)
+  let to = niji.oklch(0.5, 0.3, 180.0, 1.0)
+
+  // Calculate average chroma
+  let #(sum, count) =
+    niji.gradient_fold(from, to, 5, #(0.0, 0), fn(acc, color) {
+      let #(s, c) = acc
+      #(s +. color.c, c + 1)
+    })
+
+  let avg = sum /. int.to_float(count)
+
+  // Average should be around 0.2 (halfway between 0.1 and 0.3)
+  assert float.loosely_equals(avg, with: 0.2, tolerating: 0.01)
+}
+
+pub fn gradient_fold_negative_count_test() {
+  let from = niji.oklch(0.3, 0.2, 0.0, 1.0)
+  let to = niji.oklch(0.7, 0.2, 180.0, 1.0)
+
+  // Negative count should return initial accumulator unchanged
+  let result =
+    niji.gradient_fold(from, to, -5, "unchanged", fn(_, color) {
+      niji.to_hex(color)
+    })
+
+  assert result == "unchanged"
+}
+
+pub fn gradient_fold_identical_colors_test() {
+  let color = niji.oklch(0.5, 0.2, 180.0, 1.0)
+
+  // Gradient between identical colors should produce identical results
+  let colors =
+    niji.gradient_fold(color, color, 3, [], fn(acc, c) { [c, ..acc] })
+    |> list.reverse()
+
+  let assert [c1, c2, c3] = colors
+  // All colors should be identical
+  assert float.loosely_equals(c1.l, with: 0.5, tolerating: 0.001)
+  assert float.loosely_equals(c2.l, with: 0.5, tolerating: 0.001)
+  assert float.loosely_equals(c3.l, with: 0.5, tolerating: 0.001)
+}
+
+pub fn gradient_fold_preserves_alpha_test() {
+  let from = niji.oklch(0.3, 0.2, 0.0, 0.5)
+  let to = niji.oklch(0.7, 0.2, 180.0, 1.0)
+
+  let alphas =
+    niji.gradient_fold(from, to, 5, [], fn(acc, color) { [color.alpha, ..acc] })
+    |> list.reverse()
+
+  // First alpha should be 0.5, last should be 1.0
+  let assert [first_alpha, ..] = alphas
+  let assert [_, _, _, _, last_alpha] = alphas
+
+  assert float.loosely_equals(first_alpha, with: 0.5, tolerating: 0.01)
+  assert float.loosely_equals(last_alpha, with: 1.0, tolerating: 0.01)
 }
 
 // =============================================================================
@@ -1282,39 +1406,6 @@ pub fn gamut_extreme_high_lightness_high_chroma_test() {
   assert rgb.r >=. 0.0 && rgb.r <=. 1.0
   assert rgb.g >=. 0.0 && rgb.g <=. 1.0
   assert rgb.b >=. 0.0 && rgb.b <=. 1.0
-}
-
-// =============================================================================
-// STEPS EDGE CASES
-// =============================================================================
-
-pub fn steps_last_color_matches_to_test() {
-  let from = niji.oklch(0.3, 0.2, 0.0, 1.0)
-  let to = niji.oklch(0.7, 0.2, 180.0, 1.0)
-  let scale = niji.steps(from, to, 5)
-
-  let assert [_, _, _, _, last] = scale
-  // Last color should approximately match 'to'
-  assert float.loosely_equals(last.l, with: 0.7, tolerating: 0.01)
-  assert float.loosely_equals(last.h, with: 180.0, tolerating: 0.5)
-}
-
-pub fn steps_negative_count_test() {
-  let from = niji.oklch(0.3, 0.2, 0.0, 1.0)
-  let to = niji.oklch(0.7, 0.2, 180.0, 1.0)
-  let scale = niji.steps(from, to, -5)
-  assert list.is_empty(scale)
-}
-
-pub fn steps_identical_colors_test() {
-  let color = niji.oklch(0.5, 0.2, 180.0, 1.0)
-  let scale = niji.steps(color, color, 3)
-
-  let assert [c1, c2, c3] = scale
-  // All colors should be identical
-  assert float.loosely_equals(c1.l, with: 0.5, tolerating: 0.001)
-  assert float.loosely_equals(c2.l, with: 0.5, tolerating: 0.001)
-  assert float.loosely_equals(c3.l, with: 0.5, tolerating: 0.001)
 }
 
 // =============================================================================

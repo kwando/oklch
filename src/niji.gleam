@@ -57,7 +57,6 @@
 import gleam/bit_array
 import gleam/float
 import gleam/int
-import gleam/list
 import gleam_community/colour.{type Colour}
 
 // =============================================================================
@@ -938,47 +937,69 @@ fn evaluate_candidate(candidate: Oklch) -> #(Bool, Oklch, Float, Bool, Bool) {
 // COLOR SCALE GENERATION
 // =============================================================================
 
-/// Generate a list of colors forming a perceptually uniform scale 
-/// between two colors in OKLCH space.
+/// Fold over a gradient of N colors between two OKLCH colors.
 ///
-/// The colors are evenly distributed with proper hue interpolation 
-/// that handles the 0/360 degree wraparound.
+/// Generates `count` colors evenly spaced between `from` and `to`,
+/// then applies the callback function to each color with an accumulator.
+/// The callback receives `(accumulator, color)` and returns a new accumulator.
+///
+/// This is similar to `int.fold` but iterates over interpolated colors
+/// rather than integers. Hue interpolation handles the 0/360 boundary
+/// correctly by taking the shortest path.
 ///
 /// ## Examples
+///
+/// Build a list of hex strings from a 5-step gradient:
 /// ```gleam
 /// let blue = niji.oklch(0.5, 0.2, 250.0, 1.0)
 /// let red = niji.oklch(0.5, 0.2, 25.0, 1.0)
-/// let scale = niji.steps(blue, red, 5)
-/// // Returns 5 colors from blue to red
+///
+/// let hexes = niji.gradient_fold(blue, red, 5, [], fn(acc, color) {
+///   [niji.to_hex(color), ..acc]
+/// }) |> list.reverse()
+/// // Returns: ["#...", "#...", "#...", "#...", "#..."]
 /// ```
-pub fn steps(from: Oklch, to: Oklch, count: Int) -> List(Oklch) {
+///
+/// Compute the sum of lightness values:
+/// ```gleam
+/// let sum = niji.gradient_fold(from, to, 10, 0.0, fn(acc, color) {
+///   acc +. color.l
+/// })
+/// ```
+///
+/// ## Edge Cases
+///
+/// - If `count` <= 0, returns the initial accumulator unchanged
+/// - If `count` == 1, the callback is called once with the `from` color
+/// - The last color passed to the callback is always `to` (or very close to it)
+pub fn gradient_fold(
+  from: Oklch,
+  to: Oklch,
+  count: Int,
+  acc: a,
+  callback: fn(a, Oklch) -> a,
+) -> a {
   case count {
-    n if n <= 0 -> []
-    1 -> [from]
-    n -> generate_steps(from, to, n)
+    n if n <= 0 -> acc
+    _ -> gradient_fold_recursive(from, to, count, 0, acc, callback)
   }
 }
 
-fn generate_steps(from: Oklch, to: Oklch, count: Int) -> List(Oklch) {
-  // Generate count colors evenly spaced between from and to
-  // We use mix() which handles proper hue interpolation
-  generate_steps_recursive(from, to, count, 0, [])
-  |> list.reverse()
-}
-
-fn generate_steps_recursive(
+fn gradient_fold_recursive(
   from: Oklch,
   to: Oklch,
   count: Int,
   index: Int,
-  acc: List(Oklch),
-) -> List(Oklch) {
+  acc: a,
+  callback: fn(a, Oklch) -> a,
+) -> a {
   case index >= count {
     True -> acc
     False -> {
       let weight = int.to_float(index) /. int.to_float(count - 1)
       let color = mix(from, to, weight)
-      generate_steps_recursive(from, to, count, index + 1, [color, ..acc])
+      let new_acc = callback(acc, color)
+      gradient_fold_recursive(from, to, count, index + 1, new_acc, callback)
     }
   }
 }
@@ -990,12 +1011,12 @@ fn generate_steps_recursive(
 /// Create a color from color temperature in Kelvin.
 ///
 /// Approximates the color of black-body radiation at the given
-/// temperature using an algorithm by Tanner Helland. This is a 
+/// temperature using an algorithm by Tanner Helland. This is a
 /// mathematical approximation and not physically exact.
 ///
 /// ## Typical Values
 /// - 2700K: Warm incandescent (orange-white)
-/// - 4000K: Cool white fluorescent  
+/// - 4000K: Cool white fluorescent
 /// - 6500K: Daylight (neutral white)
 /// - 15000K: Deep blue sky
 ///
@@ -1047,7 +1068,7 @@ fn temperature_green(k: Float) -> Float {
 
 fn temperature_blue(k: Float) -> Float {
   case k >=. 66.0 {
-    True -> 1.0
+    True -> 255.0
     False -> {
       case k <=. 19.0 {
         True -> 0.0
