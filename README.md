@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.png" alt="niji logo" width="300">
+  <img src="https://raw.githubusercontent.com/kwando/oklch/main/logo.png" alt="niji logo" width="300">
 </p>
 
 # niji
