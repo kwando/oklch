@@ -804,3 +804,138 @@ pub fn temperature_converts_to_rgb_test() {
   assert cg >=. 0.0 && cg <=. 1.0
   assert cb >=. 0.0 && cb <=. 1.0
 }
+
+// =============================================================================
+// GRAYSCALE TESTS
+// =============================================================================
+
+pub fn grayscale_sets_chroma_to_zero_test() {
+  let red = niji.oklch(0.5, 0.3, 0.0, 1.0)
+  let gray = niji.grayscale(red)
+  let Oklch(l: l, c: c, h: h, alpha: alpha) = gray
+
+  // Chroma should be 0
+  assert c == 0.0
+  // Hue should be 0 (irrelevant when chroma is 0)
+  assert h == 0.0
+  // Lightness should be preserved
+  assert l == 0.5
+  // Alpha should be preserved
+  assert alpha == 1.0
+}
+
+pub fn grayscale_preserves_lightness_test() {
+  let color = niji.oklch(0.8, 0.2, 120.0, 0.5)
+  let gray = niji.grayscale(color)
+  let Oklch(l: l, alpha: alpha, ..) = gray
+
+  assert l == 0.8
+  assert alpha == 0.5
+}
+
+pub fn grayscale_already_gray_test() {
+  let gray = niji.oklch(0.5, 0.0, 0.0, 1.0)
+  let result = niji.grayscale(gray)
+  let Oklch(l: l, c: c, h: h, alpha: alpha) = result
+
+  assert l == 0.5
+  assert c == 0.0
+  assert h == 0.0
+  assert alpha == 1.0
+}
+
+// =============================================================================
+// COLOR INVERSION TESTS
+// =============================================================================
+
+pub fn invert_rotates_hue_180_test() {
+  let red = niji.oklch(0.5, 0.2, 0.0, 1.0)
+  let inverted = niji.invert(red)
+  let Oklch(l: l, c: c, h: h, alpha: alpha) = inverted
+
+  // Hue should be rotated by 180°
+  assert h == 180.0
+  // Lightness should be preserved
+  assert l == 0.5
+  // Chroma should be preserved
+  assert c == 0.2
+  // Alpha should be preserved
+  assert alpha == 1.0
+}
+
+pub fn invert_preserves_lightness_and_chroma_test() {
+  let color = niji.oklch(0.7, 0.3, 90.0, 0.8)
+  let inverted = niji.invert(color)
+  let Oklch(l: l, c: c, h: h, alpha: alpha) = inverted
+
+  assert float.loosely_equals(l, with: 0.7, tolerating: 0.001)
+  assert float.loosely_equals(c, with: 0.3, tolerating: 0.001)
+  assert float.loosely_equals(alpha, with: 0.8, tolerating: 0.001)
+  assert h == 270.0
+}
+
+pub fn invert_double_inversion_test() {
+  let original = niji.oklch(0.5, 0.2, 45.0, 1.0)
+  let inverted = niji.invert(original)
+  let double_inverted = niji.invert(inverted)
+  let Oklch(l: l, c: c, h: h, alpha: alpha) = double_inverted
+
+  // Double inversion should return approximately the original
+  assert float.loosely_equals(l, with: 0.5, tolerating: 0.001)
+  assert float.loosely_equals(c, with: 0.2, tolerating: 0.001)
+  assert float.loosely_equals(h, with: 45.0, tolerating: 0.001)
+  assert float.loosely_equals(alpha, with: 1.0, tolerating: 0.001)
+}
+
+pub fn invert_full_rotates_hue_and_inverts_lightness_test() {
+  let red = niji.oklch(0.3, 0.2, 0.0, 1.0)
+  let inverted = niji.invert_full(red)
+  let Oklch(l: l, c: c, h: h, alpha: alpha) = inverted
+
+  // Hue should be rotated by 180°
+  assert h == 180.0
+  // Lightness should be inverted (1.0 - 0.3 = 0.7)
+  assert float.loosely_equals(l, with: 0.7, tolerating: 0.001)
+  // Chroma should be preserved
+  assert c == 0.2
+  // Alpha should be preserved
+  assert alpha == 1.0
+}
+
+pub fn invert_full_double_inversion_test() {
+  let original = niji.oklch(0.4, 0.2, 60.0, 0.5)
+  let inverted = niji.invert_full(original)
+  let double_inverted = niji.invert_full(inverted)
+  let Oklch(l: l, c: c, h: h, alpha: alpha) = double_inverted
+
+  // Double full inversion should return approximately the original
+  // Hue: 60 -> 240 -> 60
+  // Lightness: 0.4 -> 0.6 -> 0.4
+  assert float.loosely_equals(l, with: 0.4, tolerating: 0.001)
+  assert float.loosely_equals(c, with: 0.2, tolerating: 0.001)
+  assert float.loosely_equals(h, with: 60.0, tolerating: 0.001)
+  assert float.loosely_equals(alpha, with: 0.5, tolerating: 0.001)
+}
+
+pub fn invert_full_with_white_test() {
+  let white = niji.oklch(1.0, 0.0, 0.0, 1.0)
+  let inverted = niji.invert_full(white)
+  let Oklch(l: l, c: c, h: _h, alpha: alpha) = inverted
+
+  // White with 0 chroma -> inverted lightness should be 0
+  assert l == 0.0
+  assert c == 0.0
+  // Hue is irrelevant when chroma is 0, but should be rotated
+  assert alpha == 1.0
+}
+
+pub fn invert_full_with_black_test() {
+  let black = niji.oklch(0.0, 0.0, 0.0, 1.0)
+  let inverted = niji.invert_full(black)
+  let Oklch(l: l, c: c, h: _h, alpha: alpha) = inverted
+
+  // Black with 0 chroma -> inverted lightness should be 1.0
+  assert l == 1.0
+  assert c == 0.0
+  assert alpha == 1.0
+}

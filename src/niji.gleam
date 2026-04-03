@@ -335,6 +335,52 @@ pub fn set_h(color: Oklch, h: Float) -> Oklch {
   Oklch(l: l, c: c, h: h, alpha: alpha)
 }
 
+/// Convert a color to grayscale.
+///
+/// Removes all chroma while preserving the lightness (luminance).
+/// The resulting color has the same perceptual brightness but no hue.
+///
+/// ## Examples
+/// ```gleam
+/// let red = niji.oklch(0.5, 0.3, 0.0, 1.0)
+/// let gray = niji.grayscale(red)
+/// // gray has same lightness (0.5) but chroma = 0
+/// ```
+pub fn grayscale(color: Oklch) -> Oklch {
+  let Oklch(l: l, c: _, h: _, alpha: alpha) = color
+  // Set chroma to 0, hue becomes irrelevant
+  Oklch(l: l, c: 0.0, h: 0.0, alpha: alpha)
+}
+
+/// Invert a color.
+///
+/// Rotates hue by 180° (complementary color).
+///
+/// ## Examples
+/// ```gleam
+/// // Hue-only inversion
+/// let inverted = niji.invert(color)
+/// ```
+pub fn invert(color: Oklch) -> Oklch {
+  rotate_hue(color, 180.0)
+}
+
+/// Fully invert a color (hue + lightness).
+///
+/// Rotates hue by 180° and inverts lightness (1.0 - L).
+///
+/// ## Examples
+/// ```gleam
+/// let red = niji.oklch(0.5, 0.3, 0.0, 1.0)
+/// let inverted = niji.invert_full(red)
+/// // Results in cyan with lightness 0.5
+/// ```
+pub fn invert_full(color: Oklch) -> Oklch {
+  let inverted_hue = rotate_hue(color, 180.0)
+  let Oklch(l: l, c: c, h: h, alpha: alpha) = inverted_hue
+  Oklch(l: 1.0 -. l, c: c, h: h, alpha: alpha)
+}
+
 // =============================================================================
 // UTILITY FUNCTIONS
 // =============================================================================
