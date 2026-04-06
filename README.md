@@ -66,7 +66,7 @@ pub fn main() {
   let safe = niji.gamut_map(mixed)
 
   // Print values in terminal color
-  let preview = niji.ansi_bg(safe, "  OKLCH  ")
+  let preview = niji.ansi_bg("  OKLCH  ", safe)
   preview
 }
 ```
